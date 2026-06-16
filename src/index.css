@@ -1,0 +1,126 @@
+body {
+  background-color: #222222;
+  color: #F5F5F5;
+  font-family: "Jost", sans-serif;
+}
+.link {
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  color: 	#F5F5F5;
+  font-size: 18px;
+}
+.link:hover {
+  transform: scale(1.1);
+  color: grey;
+}
+ul {
+  list-style-type: none;
+}
+p, li {
+  font-size: 16px !important;
+}
+.hidden {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.info-box {
+  transition: all 0.2s ease-in-out;
+  background-color: #222222;
+}
+.home-list {
+  font-size: 18px;
+}
+h1 {
+  font-size: 40px;
+  font-family: "Jost", sans-serif;
+}
+h4 {
+  font-size: 20px;
+}
+.sub {
+  font-size: 24px;
+  font-family: "Jost", sans-serif;
+}
+@media (max-width: 968px) {
+  p, li {
+    font-size: 12px;
+  }
+  .link {
+    font-size: 20px;
+    width: 50%;
+  }
+  h4 {
+    font-size: 16px;
+  }
+}
+input, textarea {
+  color: #F5F5F5;
+  background-color: #222222;
+  font-size: 16px;
+  border: none;
+}
+.checkout {
+  border: 1px solid black;
+  color: black !important;
+  background-color: white !important;
+}
+button {
+  background-color: #222222;
+  color: #F5F5F5;
+  font-size: 20px;
+  transition: all 0.2s ease-in-out;
+}
+button:hover {
+  transform: scale(1.05);
+}
+i {
+  transition: all 0.2s ease-in-out;
+}
+i:hover {
+  transform: scale(1.1);
+  cursor: pointer;
+}
+.logo {
+  border-radius: 50%;
+  border: 5px solid #F5F5F5;
+  box-shadow: 0 0 20px 5px #F5F5F5;
+}
+th, td {
+  border-bottom: 1px solid #F5F5F5;
+  padding: 8px;
+}
+.upload {
+  margin: 20px;
+  font-size: 24px;
+}
+.drop {
+  border: 2px dashed grey;
+  padding: 20px;
+}
+label {
+  font-weight: bold;
+}
+.slider-container {
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.5rem;
+}
+input, textarea {
+  border: 1px solid rgba(128, 128, 128, 0.5);;
+  background-color: #222222;
+  color: #F5F5F5;
+  font-size: 16px;
+  transition: all 0.2s ease-in-out;
+}
+input:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 5px #F5F5F5;
+}
