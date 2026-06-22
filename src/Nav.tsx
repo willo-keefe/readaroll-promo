@@ -5,24 +5,22 @@ import AuthContext from './AuthContext';
 const Nav: React.FC = () => {
     const { isAuthenticated } = useContext(AuthContext);
     return (
-        <nav className="p-3 m-3 flex justify-between items-center">
-                <Link to="/" className="m-3 link" title="Home">
+        <nav className="p-2 m-1 mb-4 mx-auto d-flex justify-content-start align-items-center border-bottom">
+                <Link to="/" className=" m-1 mx-3 mb-3 link" title="Home">
                     Home
                 </Link>
-                <Link to="/about" className="m-3 link" title="About">
-                    About
-                </Link>
-                {isAuthenticated ? (
-                    <div>
-                        <Link to="/dashboard" className="m-3 link" title="Dashboard">
+                    <Link to="/about" className="m-1 mx-3 mb-3 link" title="About">
+                        About
+                    </Link>
+                    {isAuthenticated ? (
+                        <Link to="/dashboard" className="m-1 mx-3 mb-3 link" title="Dashboard">
                             Dashboard
                         </Link>
-                    </div>
-                ) : (
-                    <Link to="/login" className="m-3 link" title="Login">
-                        Login
-                    </Link>
-                )}
+                    ) : (
+                        <Link to="/login" className="m-1 mx-3 mb-3 link" title="Login">
+                            Login
+                        </Link>
+                    )}
         </nav>
     );
 };

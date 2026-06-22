@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -17,17 +18,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const login = async (email: string, password: string) => {
-        const formData = new FormData();
-        formData.append("email", email);
-        formData.append("password", password);
-        const res = await fetch("https://readaroll-backend-production.up.railway.app/login", {
-            method: "POST",
-            body: formData,
-        });
-        if (res.ok) {
+        const navigate = useNavigate();
+        try {
+            const res = await fetch("https://readaroll-backend-production.up.railway.app/login", {
+                method: "POST",
+                credentials: "include",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+            if ('requiresTwoFacctor' in res && (res as any).requiresTwoFactor) {
+                navigate('/2fa/challenge', { state: { pendingToken: (res as any).pendingToken } });
+            }
             setIsAuthenticated(true);
+            navigate('/dashboard');
         }
-        else {
+        catch (err: any) {
+            console.error("Login Error", err);
             MySwal.fire("Your login attempt was not successful. Please try again.");
         }
     };

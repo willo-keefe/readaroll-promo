@@ -7,10 +7,9 @@ body {
   transition: all 0.2s ease-in-out;
   text-decoration: none;
   color: 	#F5F5F5;
-  font-size: 18px;
+  font-size: 20px;
 }
 .link:hover {
-  transform: scale(1.1);
   color: grey;
 }
 ul {
@@ -86,9 +85,13 @@ i:hover {
   cursor: pointer;
 }
 .logo {
+  transition: all 0.2s ease-in-out;
   border-radius: 50%;
   border: 5px solid #F5F5F5;
   box-shadow: 0 0 20px 5px #F5F5F5;
+}
+.logo:hover {
+  transform: scale(1.1);
 }
 th, td {
   border-bottom: 1px solid #F5F5F5;
