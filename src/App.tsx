@@ -239,8 +239,8 @@ const Login: React.FC = () => {
       <form onSubmit={handleLogin}>
         <div className="row px-5 pt-2 m-2 slide-up hidden">
           <div className="col-sm-12 info-box">
-            <h4 className="m-1 mt-3">Email</h4>
-            <input type="email" placeholder="Email..." value={email} className="m-3 p-2 w-25 rounded" onChange={(e) => setEmail(e.target.value)} required />
+            <h4 className="m-1 mt-3">Email or Username</h4>
+            <input type="text" placeholder="Email or Username..." value={email} className="m-3 p-2 w-25 rounded" onChange={(e) => setEmail(e.target.value)} required />
             <h4 className="m-1 mt-3">Password</h4>
             <input type="password" placeholder="********" className="rounded m-3 w-25 p-2" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
@@ -255,6 +255,8 @@ const Login: React.FC = () => {
 
 const Dashboard: React.FC = () => {
   const { logout, isAuthenticated } = useContext(AuthContext);
+  const [user, setUser] = useState<{ email: string, username: string, avatar_url: string} | null>(null);
+  const MySwal = withReactContent(Swal);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -262,6 +264,19 @@ const Dashboard: React.FC = () => {
       navigate("/login");
     }
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    fetch("https://readaroll-backend-production.up.railway.app/me", {
+      method: "GET",
+      credentials: "include"
+    }).then(r => r.json()).then(data => {
+      setUser(data);
+    }).catch(error => {
+      console.error('There was an error fetching the user', error);
+      MySwal.fire("There was an error getting your information, please try reloading the dashboard.");
+    });
+  }, []);
+
   useEffect(() => {
     const elements = document.querySelectorAll(".slide-up");
     const observer = new IntersectionObserver(
@@ -287,8 +302,8 @@ const Dashboard: React.FC = () => {
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-12 p-4 info-box">
-          <h4 className="m-1 mt-3">Username</h4>
-          <p className="p-2 py-3"></p>
+          <h4 className="m-1 mb-4">{user ? user.username : 'Unknown'}</h4>
+          <Link to="/2fa/setup" className="link">Enable Two Factor Authentication</Link>
         </div>
       </div>
       <button className="rounded m-3 p-3 w-25 border-none" onClick={logout}>Logout</button>
@@ -312,9 +327,15 @@ const TwoFactorAuthSetup: React.FC = () => {
         method: "POST",
         credentials: "include",
       });
-        setQrUrl((res as any).qrDataUrl);
-        setManualKey((res as any).manualKey);
-        setLoading(false);
+      if (!res.ok) {
+        console.error("Error setting up 2fa");
+        MySwal.fire("The 2FA setup was not successful. Please try again.");
+      }
+      const data = await res.json();
+      setQrUrl(data.qrDataUrl);
+      setManualKey(data.manuelKey);
+      setLoading(false);
+      console.log(qrUrl, manualKey);
     }
     catch (err: any) {
       console.error('2FA error', err);
@@ -331,7 +352,11 @@ const TwoFactorAuthSetup: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-      setBackupCodes((res as any).backup_codes);
+      if (!res.ok) {
+        console.error("Error in 2FA setup.");
+      }
+      const data = await res.json();
+      setBackupCodes(data.backup_codes);
     }
     catch (err: any) {
       console.error('2FA error', err);
@@ -397,8 +422,8 @@ const TwoFactorAuthSetup: React.FC = () => {
           ) : (
             <div>
               <img src={qrUrl} alt="Scan with Google Authenticator" />
-              <p className="p-2 py-3 m-3">Scan this code with Google Authenticator, or enter the manual code below: <code>{manualKey}</code></p>
-              <input type="text" inputMode="numeric" className="m-3 p-2 w-25 rounded" maxLength={6} placeholder="6 Digit Code" value={token} onChange={e => setToken(e.target.value)} />
+              <p className="p-2 py-3 m-3">Scan this code with Google Authenticator. After that, enter the 6 digit code below: <code>{manualKey}</code></p>
+              <input type="text" inputMode="numeric" className="m-1 p-2 w-25 rounded" maxLength={6} placeholder="6 Digit Code" value={token} onChange={e => setToken(e.target.value)} />
             </div>
           )}
         </div>
@@ -425,15 +450,13 @@ async function TwoFactorChallenge({ pendingToken, onSuccess }: Props) {
       const res = await fetch("https://readaroll-backend-production.up.railway.app/mfa/challenge", {
         method: "POST",
         credentials: "include",
-        headers: { 'content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pendingToken, ...(useBackup ? { backupCode } : { totpToken })}),
       });
-      if (res.ok) {
-        onSuccess();
-      }
-      else {
+      if (!res.ok) {
         MySwal.fire("There was an error authenticating your account. Please try again");
       }
+      onSuccess();
     }
     catch (err: any) {
       console.error('2FA error', err);
