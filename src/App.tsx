@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useContext, useCallback, useRef } from 'react';
+import { BrowserRouter as Router, Route, Routes, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import logo from '../android-chrome-192x192.png';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -109,6 +109,7 @@ const About: React.FC = () => {
 const Join: React.FC = () => {
   const { isAuthenticated } = useContext(AuthContext);
   const [username, setUsername] = useState<string>("");
+  const [displayName, setDisplayName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [matchingPassword, setMatchingPassword] = useState<string>("");
@@ -148,7 +149,7 @@ const Join: React.FC = () => {
         const res = await fetch("https://readaroll-backend-production.up.railway.app/register", {
           method: "POST",
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password, matchingPassword }),
+          body: JSON.stringify({ username, displayName, email, password, matchingPassword }),
         });
         if (res.ok) {
           setLoading(false);
@@ -178,8 +179,10 @@ const Join: React.FC = () => {
       <form onSubmit={join}>
       <div className="row px-5 pt-2 m-2 slide-up hidden">
           <div className="col-sm-12 info-box">
-            <h4 className="m-1 mt-3">Username</h4>
+            <h4 className="m-1 mt-3">Username (no spaces or capital letters)</h4>
             <input type="text" className="m-3 p-2 w-25 rounded" placeholder="Username..." value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <h4 className="m-1 mt-3">Display Name</h4>
+            <input type="text" className="m-3 p-2 w-25 rounded" placeholder="Display Name..." value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
             <h4 className="m-1 mt-3">Email</h4>
             <input type="email" placeholder="Email..." value={email} className="m-3 p-2 w-25 rounded" onChange={(e) => setEmail(e.target.value)} required />
             <h4 className="m-1 mt-3">Password</h4>
@@ -364,7 +367,7 @@ const TwoFactorAuthSetup: React.FC = () => {
     }
   }
 
-    useEffect(() => {
+  useEffect(() => {
     const elements = document.querySelectorAll(".slide-up");
     const observer = new IntersectionObserver(
       (entries, obs) => {
@@ -464,6 +467,10 @@ async function TwoFactorChallenge({ pendingToken, onSuccess }: Props) {
     }
   }
 
+  useEffect(() => {
+
+  }, []);
+
   return (
     <div className="container text-center slide-up hidden">
       <Nav />
@@ -512,6 +519,248 @@ const TwoFactorAuthChallenge: React.FC = () => {
     <TwoFactorChallenge pendingToken={pendingToken} onSuccess={() => navigate('/dashboard')} />
   );
 };
+
+interface UploadResponse {
+  manuscript: {
+    id: string;
+    storagePath: string;
+    contentType: string;
+    originalName: string;
+  };
+  cover: {
+    storagePath: string;
+    contentType: string;
+  };
+}
+
+interface FormFields {
+  title: string;
+  author: string;
+  description: string;
+  pageCount: string;
+}
+
+const ACCEPTED_MANUSCRIPTS = '.pdf,.epub';
+const ACCEPTED_COVERS = '.jpg,.jpeg,.png,.webp,.gif';
+
+function formatBytes(bytes: number) {
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+const Upload: React.FC = () => {
+  const navigate = useNavigate();
+  const [fields, setFields] = useState<FormFields>({
+    title: '',
+    author: '',
+    description: '',
+    pageCount: '',
+  });
+  const [manuscript, setManuscript] = useState<File | null>(null);
+  const [cover, setCover] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
+  const [progress, setProgress] = useState(0);
+  const [uploading, setUploading] = useState<boolean>(false);
+
+  const manuscriptInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+
+  const MySwal = withReactContent(Swal);
+
+  const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFields(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleManuscriptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+    if (file.size > 100. * 1024 * 1024) {
+      MySwal.fire("Your manuscript file is too big. Please submit a file under 100 MB.");
+      e.target.value = '';
+      return
+    }
+    setManuscript(file);
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      MySwal.fire("Your cover file is too big. Please submit a file under 10 MB.");
+      e.target.value = '';
+      return;
+    }
+    setCover(file);
+    const url = URL.createObjectURL(file);
+    setCoverPreview(prev => {
+      if (prev) {
+        URL.revokeObjectURL(prev);
+      }
+      return url;
+    });
+  };
+
+  const handleSubmit = useCallback(() => {
+    if (!manuscript || !cover) {
+      MySwal.fire("You must have a manuscript and a cover file uploaded.");
+      return;
+    }
+    if (!fields.title.trim()) {
+      MySwal.fire("A title is required for the work.");
+      return;
+    }
+    setProgress(0);
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append('manuscript', manuscript);
+    formData.append('cover', cover);
+    formData.append('title', fields.title.trim());
+    formData.append('author', fields.author.trim() || 'Anonymous');
+    formData.append('description', fields.description.trim());
+    if (fields.pageCount) {
+      formData.append('page_count', fields.pageCount);
+    }
+
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        setProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      setUploading(false);
+      if (xhr.status === 201) {
+        const data: UploadResponse = JSON.parse(xhr.responseText);
+        navigate(`/manuscripts/${data.manuscript.id}`);
+      }
+      else {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          console.error(data.error ?? 'Upload failed');
+          MySwal.fire("Upload failed. Try again.");
+        }
+        catch {
+          MySwal.fire("Upload failed. Try again.");
+        }
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      setUploading(false);
+      MySwal.fire("There was a network error. Please try again.");
+    });
+
+    xhr.addEventListener('abort', () => {
+      setUploading(false);
+      setProgress(0);
+    });
+
+    xhr.open('POST', 'readaroll-backend-production.up.railway.app/upload');
+    xhr.withCredentials = true;
+    xhr.send(formData);
+  }, [manuscript, cover, fields, navigate]);
+
+  const handleCancel = () => {
+    xhrRef.current?.abort();
+  };
+
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">ReadaRoll</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4 info-box">
+          <div onClick={() => coverInputRef.current?.click()} style={{ cursor: 'pointer' }}>
+            {coverPreview ? (
+              <img src={coverPreview} alt="Cover Preview" style={{ width: 160, height: 240, objectFit: 'cover' }} />
+            ) : (
+              <div style={{ width: 160, height: 240, border: '2px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span>Click to add cover</span>
+              </div>
+            )}
+          </div>
+          <input ref={coverInputRef} type="file" accept={ACCEPTED_COVERS} onChange={handleCoverChange} style={{ display: 'none' }} />
+          <div>
+            <button className="rounded m-3 p-3 w-25 border-none" onClick={() => manuscriptInputRef.current?.click()}>
+              {manuscript ? manuscript.name : 'Choose manuscript (PDF or EPUB)'}
+            </button>
+            {manuscript && (
+              <span>{formatBytes(manuscript.size)}</span>
+            )}
+            <input ref={manuscriptInputRef} type="file" accept={ACCEPTED_MANUSCRIPTS} onChange={handleManuscriptChange} style={{ display: 'none' }} />
+          </div>
+          <div>
+            <input className="m-1 p-2 w-25 rounded" type="text" name="title" placeholder="Title" value={fields.title} onChange={handleFieldChange} disabled={uploading} />
+            <input className="m-1 p-2 w-25 rounded" type="author" name="author" placeholder="Author" value={fields.author} onChange={handleFieldChange} disabled={uploading} />
+            <textarea className="m-1 p-2 w-25 rounded" name="description" placeholder="Description" value={fields.description} onChange={handleFieldChange} disabled={uploading} />
+            <input className="m-1 p-2 w-25 rounded" name="pageCount" type="number" placeholder="Page Count" min={1} value={fields.pageCount} onChange={handleFieldChange} disabled={uploading} />
+          </div>
+          {uploading && (
+            <div>
+              <div style={{ background: '#eee', borderRadius: 4, overflow: 'hidden', height: 8 }}>
+                <div style={{ width: `${progress}%`, height: '100%', background: '#F5F5F5', transition: 'width 0.2s' }} />
+              </div>
+              <span>{progress}%</span>
+              <button className="rounded m-3 p-3 w-25 border-none" onClick={handleCancel}>Cancel</button>
+            </div>
+          )}
+          {!uploading && (
+            <button className="rounded m-3 p-3 w-25 border-none" onClick={handleSubmit}>
+              Upload
+            </button>
+          )}
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+const Library: React.FC = () => {
+  return (
+    <div>
+
+    </div>
+  );
+};
+
+const Profile: React.FC = () => {
+  const { username } = useParams();
+  return (
+    <div>
+
+    </div>
+  );
+};
 function App() {
   return (
     <AuthProvider>
@@ -524,6 +773,9 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/2fa/setup" element={<TwoFactorAuthSetup />} />
           <Route path="/2fa/challenge" element={<TwoFactorAuthChallenge />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/library" element={<Library />} />
+          <Route path="/users/:username" element={<Profile />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </Router>
