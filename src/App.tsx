@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import logo from '../android-chrome-192x192.png';
 import Swal from 'sweetalert2';
@@ -34,15 +34,15 @@ const Home: React.FC = () => {
       <h4 className="m-3 sub">A New Way to Learn.</h4>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row pt-2 m-2 slide-up hidden">
-        <div className="col-sm-4 p-4 info-box">
+        <div className="col-sm-4 p-4">
           <h4 className="m-3 sub">Read</h4>
           <p className="home-list border-top p-2 py-3">Read through an extensive collection of novels, short stories, articles, and more with custom formatting and a smooth scrolling experience.</p>
         </div>
-        <div className="col-sm-4 p-4 info-box">
+        <div className="col-sm-4 p-4">
           <h4 className="m-3 sub">Contribute</h4>
           <p className="home-list border-top p-2 py-3">Contribute to the community by giving your annotations on individual pages and reviews on the books.</p>
         </div>
-        <div className="col-sm-4 p-4 info-box">
+        <div className="col-sm-4 p-4">
           <h4 className="m-3 sub">The Mission</h4>
           <p className="home-list border-top p-2 py-3">Our mission is to create a seamless reading experience for our users while also creating a stronger and more genuine community around reading and discussion. It's like a big book club!</p>
         </div>
@@ -160,7 +160,7 @@ const Join: React.FC = () => {
           MySwal.fire("There was an error signing up. Try again.");
         }
       }
-      catch (error) {
+      catch (error: any) {
         console.log(error);
         setLoading(false);
         MySwal.fire("There was an error signing up.");
@@ -178,17 +178,17 @@ const Join: React.FC = () => {
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={125} height={125} />
       <form onSubmit={join}>
       <div className="row px-5 pt-2 m-2 slide-up hidden">
-          <div className="col-sm-12 info-box">
+          <div className="col-sm-12">
             <h4 className="m-1 mt-3">Username (no spaces or capital letters)</h4>
-            <input type="text" className="m-3 p-2 w-25 rounded" placeholder="Username..." value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <input type="text" className="m-3 p-2 w-50 rounded" name="username" placeholder="Username..." value={username} onChange={(e) => setUsername(e.target.value)} required />
             <h4 className="m-1 mt-3">Display Name</h4>
-            <input type="text" className="m-3 p-2 w-25 rounded" placeholder="Display Name..." value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+            <input type="text" className="m-3 p-2 w-50 rounded" name="displayName" placeholder="Display Name..." value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
             <h4 className="m-1 mt-3">Email</h4>
-            <input type="email" placeholder="Email..." value={email} className="m-3 p-2 w-25 rounded" onChange={(e) => setEmail(e.target.value)} required />
+            <input type="email" placeholder="Email..." name="email" value={email} className="m-3 p-2 w-50 rounded" onChange={(e) => setEmail(e.target.value)} required />
             <h4 className="m-1 mt-3">Password</h4>
-            <input type="password" placeholder="********" className="rounded m-3 w-25 p-2" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input type="password" placeholder="********" name="password" className="rounded m-3 w-50 p-2" value={password} onChange={(e) => setPassword(e.target.value)} required />
             <h4 className="m-1 mt-3">Confirm Password</h4>
-            <input type="password" placeholder="********" className="rounded m-3 w-25 p-2" value={matchingPassword} onChange={(e) => setMatchingPassword(e.target.value)} required />
+            <input type="password" placeholder="********" name="matchingPassword" className="rounded m-3 w-50 p-2" value={matchingPassword} onChange={(e) => setMatchingPassword(e.target.value)} required />
           </div>
       </div>
       <button className="rounded m-3 p-3 w-25" type="submit" disabled={loading}>{loading ? '...' : 'Join ReadaRoll'}</button>
@@ -241,11 +241,11 @@ const Login: React.FC = () => {
      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={125} height={125} />
       <form onSubmit={handleLogin}>
         <div className="row px-5 pt-2 m-2 slide-up hidden">
-          <div className="col-sm-12 info-box">
+          <div className="col-sm-12">
             <h4 className="m-1 mt-3">Email or Username</h4>
-            <input type="text" placeholder="Email or Username..." value={email} className="m-3 p-2 w-25 rounded" onChange={(e) => setEmail(e.target.value)} required />
+            <input type="text" placeholder="Email or Username..." name="email" value={email} className="m-3 p-2 w-50 rounded" onChange={(e) => setEmail(e.target.value)} required />
             <h4 className="m-1 mt-3">Password</h4>
-            <input type="password" placeholder="********" className="rounded m-3 w-25 p-2" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input type="password" placeholder="********" name="password" className="rounded m-3 w-50 p-2" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
         </div>
         <button className="rounded m-3 p-3 w-25 border-none" type="submit">Login</button>
@@ -256,9 +256,23 @@ const Login: React.FC = () => {
   );
 };
 
+interface User {
+  id: string;
+  username: string;
+  display_name: string;
+  email: string;
+  description: string;
+}
+
 const Dashboard: React.FC = () => {
   const { logout, isAuthenticated } = useContext(AuthContext);
-  const [user, setUser] = useState<{ email: string, username: string, avatar_url: string} | null>(null);
+  const [user, setUser] = useState<User>({
+    id: '',
+    username: '',
+    display_name: '',
+    email: '',
+    description: '',
+  });
   const MySwal = withReactContent(Swal);
   const navigate = useNavigate();
 
@@ -267,6 +281,11 @@ const Dashboard: React.FC = () => {
       navigate("/login");
     }
   }, [isAuthenticated, navigate]);
+
+  const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setUser(prev => ({ ...prev, [name]: value ?? '' }));
+  };
 
   useEffect(() => {
     fetch("https://readaroll-backend-production.up.railway.app/me", {
@@ -279,6 +298,25 @@ const Dashboard: React.FC = () => {
       MySwal.fire("There was an error getting your information, please try reloading the dashboard.");
     });
   }, []);
+
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch("readaroll-backend-production.up.railway.app/profile", {
+        method: "PUT",
+        credentials: "include",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: user.description, displayName: user.display_name }),
+      });
+      if (!res.ok) {
+        MySwal.fire("There was an error saving your profile information. Please try again.");
+      }
+      MySwal.fire("Your profile information was saved successfully!");
+    }
+    catch (err: any) {
+      console.error(err);
+      MySwal.fire("There was an error saving your profile info. Please try again.");
+    }
+  };
 
   useEffect(() => {
     const elements = document.querySelectorAll(".slide-up");
@@ -303,13 +341,19 @@ const Dashboard: React.FC = () => {
       <Nav />
       <h1 className="mx-auto p-2">ReadaRoll Dashboard</h1>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
-      <div className="row px-5 pt-2 m-2 slide-up hidden">
-        <div className="col-sm-12 p-4 info-box">
+      <div className="row px-5 pt-2 m-2 slide-up hidden border rounded">
+        <div className="col-sm-12 p-2">
+          <input type="text" name="display_name" className="m-3 p-2 w-50 rounded" style={{ textAlign: 'center' }} value={user.display_name} placeholder="Display Name..." onChange={handleFieldChange} />
           <h4 className="m-1 mb-4">{user ? user.username : 'Unknown'}</h4>
-          <Link to="/2fa/setup" className="link">Enable Two Factor Authentication</Link>
+          <textarea className="m-1 p-2 w-75 rounded" style={{ textAlign: 'center' }} name="description" placeholder="User Description..." value={user.description} onChange={handleFieldChange} />
+          <br />
+          <button className="rounded m-3 p-3 w-25 border-none" onClick={handleSubmit}>
+            Save
+          </button>
         </div>
+        <Link to="/2fa/setup" className="m-3 link">Enable Two Factor Authentication</Link>
       </div>
-      <button className="rounded m-3 p-3 w-25 border-none" onClick={logout}>Logout</button>
+      <button className="rounded m-1 p-3 w-50 border-none" onClick={logout}>Logout</button>
       <Footer />
     </div>
   );
@@ -393,7 +437,7 @@ const TwoFactorAuthSetup: React.FC = () => {
         <h1 className="mx-auto p-2">ReadaRoll Dashboard</h1>
         <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
         <div className="row px-5 pt-2 m-2 slide-up hidden">
-          <div className="col-sm-12 p-4 info-box">
+          <div className="col-sm-12 p-4">
             <h4 className="m-1 mt-3">2FA Enabled</h4>
             <p className="p-2 py-3">Save these backup codes somewhere safe. Each can only be used once.</p>
             <ul>
@@ -417,7 +461,7 @@ const TwoFactorAuthSetup: React.FC = () => {
       <h1 className="mx-auto p-2">ReadaRoll Dashboard</h1>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
-        <div className="col-sm-12 p-4 info-box">
+        <div className="col-sm-12 p-4">
           {!qrUrl ? (
             <button className="rounded m-3 p-3 w-25 border-none" onClick={startSetup} disabled={loading}>
               {loading ? '...' : 'Enable 2FA'}
@@ -426,7 +470,7 @@ const TwoFactorAuthSetup: React.FC = () => {
             <div>
               <img src={qrUrl} alt="Scan with Google Authenticator" />
               <p className="p-2 py-3 m-3">Scan this code with Google Authenticator. After that, enter the 6 digit code below: <code>{manualKey}</code></p>
-              <input type="text" inputMode="numeric" className="m-1 p-2 w-25 rounded" maxLength={6} placeholder="6 Digit Code" value={token} onChange={e => setToken(e.target.value)} />
+              <input type="text" name="token" inputMode="numeric" className="m-1 p-2 w-25 rounded" maxLength={6} placeholder="6 Digit Code" value={token} onChange={e => setToken(e.target.value)} />
             </div>
           )}
         </div>
@@ -477,12 +521,12 @@ async function TwoFactorChallenge({ pendingToken, onSuccess }: Props) {
       <h1 className="mx-auto p-2">ReadaRoll</h1>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
-        <div className="col-sm-12 p-4 info-box">
+        <div className="col-sm-12 p-4">
           <h4 className="m-1 mt-3">Two Factor Authentication</h4>
           {!useBackup ? (
-            <input type="text" className="m-3 p-2 w-25 rounded" inputMode="numeric" maxLength={6} placeholder="6 digit code from authenticator" value={totpToken} onChange={e => setTotpToken(e.target.value)} />
+            <input type="text" name="totpToken" className="m-3 p-2 w-25 rounded" inputMode="numeric" maxLength={6} placeholder="6 digit code from authenticator" value={totpToken} onChange={e => setTotpToken(e.target.value)} />
           ) : (
-            <input type="text" className="m-3 p-2 w-25 rounded" placeholder="XXXXX-XXXXX backup code" value={backupCode} onChange={e => setBackupCode(e.target.value)} />
+            <input type="text" name="backupCode" className="m-3 p-2 w-25 rounded" placeholder="XXXXX-XXXXX backup code" value={backupCode} onChange={e => setBackupCode(e.target.value)} />
           )}
           <button onClick={submit} className="rounded m-3 p-3 w-25 border-none">Verify</button>
           <button onClick={() => setUsedBackup(v => !v)}>
@@ -570,7 +614,7 @@ const Upload: React.FC = () => {
 
   const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFields(prev => ({ ...prev, [name]: value }));
+    setFields(prev => ({ ...prev, [name]: value ?? '' }));
   };
 
   const handleManuscriptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -606,7 +650,7 @@ const Upload: React.FC = () => {
     });
   };
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     if (!manuscript || !cover) {
       MySwal.fire("You must have a manuscript and a cover file uploaded.");
       return;
@@ -668,7 +712,7 @@ const Upload: React.FC = () => {
     xhr.open('POST', 'readaroll-backend-production.up.railway.app/upload');
     xhr.withCredentials = true;
     xhr.send(formData);
-  }, [manuscript, cover, fields, navigate]);
+  };
 
   const handleCancel = () => {
     xhrRef.current?.abort();
@@ -698,7 +742,7 @@ const Upload: React.FC = () => {
       <h1 className="mx-auto p-2">ReadaRoll</h1>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
-        <div className="col-sm-12 p-4 info-box">
+        <div className="col-sm-12 p-4">
           <div onClick={() => coverInputRef.current?.click()} style={{ cursor: 'pointer' }}>
             {coverPreview ? (
               <img src={coverPreview} alt="Cover Preview" style={{ width: 160, height: 240, objectFit: 'cover' }} />
@@ -719,10 +763,10 @@ const Upload: React.FC = () => {
             <input ref={manuscriptInputRef} type="file" accept={ACCEPTED_MANUSCRIPTS} onChange={handleManuscriptChange} style={{ display: 'none' }} />
           </div>
           <div>
-            <input className="m-1 p-2 w-25 rounded" type="text" name="title" placeholder="Title" value={fields.title} onChange={handleFieldChange} disabled={uploading} />
-            <input className="m-1 p-2 w-25 rounded" type="author" name="author" placeholder="Author" value={fields.author} onChange={handleFieldChange} disabled={uploading} />
-            <textarea className="m-1 p-2 w-25 rounded" name="description" placeholder="Description" value={fields.description} onChange={handleFieldChange} disabled={uploading} />
-            <input className="m-1 p-2 w-25 rounded" name="pageCount" type="number" placeholder="Page Count" min={1} value={fields.pageCount} onChange={handleFieldChange} disabled={uploading} />
+            <input className="m-1 p-2 w-50 rounded" type="text" name="title" placeholder="Title" value={fields.title} onChange={handleFieldChange} disabled={uploading} />
+            <input className="m-1 p-2 w-50 rounded" type="author" name="author" placeholder="Author" value={fields.author} onChange={handleFieldChange} disabled={uploading} />
+            <textarea className="m-1 p-2 w-50 rounded" name="description" placeholder="Description" value={fields.description} onChange={handleFieldChange} disabled={uploading} />
+            <input className="m-1 p-2 w-50 rounded" name="pageCount" type="number" placeholder="Page Count" min={1} value={fields.pageCount} onChange={handleFieldChange} disabled={uploading} />
           </div>
           {uploading && (
             <div>
@@ -755,9 +799,58 @@ const Library: React.FC = () => {
 
 const Profile: React.FC = () => {
   const { username } = useParams();
-  return (
-    <div>
+  const [user, setUser] = useState<User>({
+    id: '',
+    username: '',
+    display_name: '',
+    email: '',
+    description: '',
+  });
+  const MySwal = withReactContent(Swal);
 
+  useEffect(() => {
+    fetch(`readaroll-backend-production.up.railway.app/users/${username}`, {
+      method: "GET",
+      credentials: "include"
+    }).then(r => r.json()).then(data => {
+      setUser(data);
+    }).catch(error => {
+      console.error(error);
+      MySwal.fire("There was an error getting your profile information. Please try reloading.");
+    })
+  }, [username]);
+
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">ReadaRoll</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4">
+          <h4 className="m-1 mb-4">{user.display_name}</h4>
+          <h4 className="m-1 mb-4">{user ? user.username : 'Unknown User'}</h4>
+          <p className="home-list border-top p-2 py-3">{user.description}</p>
+        </div>
+      </div>
+      <Footer />
     </div>
   );
 };

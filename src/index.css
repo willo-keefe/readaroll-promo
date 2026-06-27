@@ -27,16 +27,12 @@ p, li {
   opacity: 1;
   transform: translateY(0);
 }
-.info-box {
-  transition: all 0.2s ease-in-out;
-  background-color: #222222;
-}
 .home-list {
   font-size: 18px;
 }
 h1 {
   font-size: 40px;
-  font-family: "Jost", sans-serif;
+  font-family: "Domine", serif;
 }
 h4 {
   font-size: 20px;
@@ -121,7 +117,6 @@ input, textarea {
   background-color: #222222;
   color: #F5F5F5;
   font-size: 16px;
-  transition: all 0.2s ease-in-out;
 }
 input:focus, textarea:focus {
   outline: none;
