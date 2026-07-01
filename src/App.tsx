@@ -856,8 +856,37 @@ const Profile: React.FC = () => {
   );
 };
 
+type Cover = {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  pageCount: number;
+  thumbnailUrl: string;
+};
+
 const Manuscript: React.FC = () => {
   const { manuscriptId } = useParams();
+  const [manuscript, setManuscript] = useState<Cover | null>(null);
+  const MySwal = withReactContent(Swal);
+
+  useEffect(() => {
+    fetch(`readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}`, {
+      method: "GET",
+      credentials: "include",
+    }).then(r => {
+      if (!r.ok) {
+        MySwal.fire("There was an error fetching the manuscript.");
+      }
+      return r.json();
+    }).then(data => {
+      setManuscript(data);
+    }).catch(error => {
+      console.error(error);
+      MySwal.fire("There was an error fetching the manuscript.");
+    });
+  }, []);
+
   useEffect(() => {
     const elements = document.querySelectorAll(".slide-up");
     const observer = new IntersectionObserver(
@@ -920,15 +949,6 @@ const Reader: React.FC = () => {
 
     </div>
   );
-};
-
-type Cover = {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  pageCount: number;
-  thumbnailUrl: string;
 };
 
 const Explore: React.FC = () => {
