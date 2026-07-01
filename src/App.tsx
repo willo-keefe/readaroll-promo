@@ -6,6 +6,7 @@ import withReactContent from 'sweetalert2-react-content';
 import Nav from './Nav';
 import Footer from './Footer';
 import AuthContext, { AuthProvider } from './AuthContext';
+import CoverGrid from './CoverGrid';
 
 const Home: React.FC = () => {
   useEffect(() => {
@@ -854,6 +855,209 @@ const Profile: React.FC = () => {
     </div>
   );
 };
+
+const Manuscript: React.FC = () => {
+  const { manuscriptId } = useParams();
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">ReadaRoll</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-6 p-4">
+
+        </div>
+        <div className="col-sm-6 p-4">
+
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+const Reader: React.FC = () => {
+  const { manuscriptId } = useParams();
+
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+
+    </div>
+  );
+};
+
+type Cover = {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  pageCount: number;
+  thumbnailUrl: string;
+};
+
+const Explore: React.FC = () => {
+  const [trending, setTrending] = useState<Cover[]>([]);
+  const [recent, setRecent] = useState<Cover[]>([]);
+  const [cursor, setCursor] = useState<number | null>(null);
+  const [library, setLibrary] = useState<Cover[]>([]);
+  const [search, setSearch] = useState<string>('');
+  const MySwal = withReactContent(Swal);
+
+  useEffect(() => {
+    fetch("readaroll-backend-production.up.railway.app/trending", {
+      method: "GET",
+      credentials: "include",
+    }).then(r => {
+      if (!r.ok) {
+        MySwal.fire("There was n error fetching the recent tranding text.");
+        return r.json();
+      }
+    }).then(data => {
+      setTrending(data);
+    }).catch(error => {
+      console.error(error);
+      MySwal.fire("There was an error fetching the most recent trending text.");
+    });
+
+    fetch("readaroll-backend-production.up.railway.app/recent", {
+      method: "GET",
+      credentials: "include",
+    }).then(r => {
+      if (!r.ok) {
+        MySwal.fire("There was an error fetching recently added texts.");
+      }
+      return r.json();
+    }).then(data => {
+      setRecent(data);
+    }).catch(error => {
+      console.error(error);
+      MySwal.fire("There was an error fetching the most recently added text.");
+    })
+  }, []);
+
+  const loadMore = async () => {
+    const res = await fetch(`readaroll-backend-production.up.railway.app/library?cursor=${cursor || 0}`, {
+      method: "GET",
+      credentials: "include",
+    });
+    const data = await res.json();
+    setLibrary(prev => [...prev, data.manuscripts]);
+    setCursor(data.nextCursor);
+  };
+
+  const runSearch = async () => {
+    if (!search || search.trim().length === 0) {
+      return;
+    }
+    const res = await fetch(`readaroll-backend-production.up.railway.app/search?query=${encodeURIComponent(search)}`, {
+      method: "GET",
+      credentials: "include",
+    });
+    const data = await res.json();
+    setLibrary(data);
+    setCursor(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      runSearch();
+    }
+  };
+
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">Explore ReadaRoll</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4">
+          <input type="text" className="m-4 p-1 rounded border w-75 d-inline" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={handleKeyDown} />
+          <p className="d-inline w-25"><i className="fas fa-search" onClick={runSearch}></i></p>
+        </div>
+      </div>
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4">
+          <h4 className="m-3">Trending</h4>
+          {trending.length > 0 && (
+            <CoverGrid covers={trending} />
+          )}
+        </div>
+      </div>
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+          <h4 className="m-3">Recently Added</h4>
+          {recent.length > 0 && (
+            <CoverGrid covers={recent} />
+          )}
+      </div>
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4">
+            <h4 className="m-3">Library</h4>
+            {library.length > 0 && (
+              <CoverGrid covers={library} />
+            )}
+            {cursor && (
+              <button className="rounded m-3 p-3 border-none" onClick={loadMore}>Load More</button>
+            )}
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+}
 function App() {
   return (
     <AuthProvider>
@@ -869,6 +1073,9 @@ function App() {
           <Route path="/upload" element={<Upload />} />
           <Route path="/library" element={<Library />} />
           <Route path="/users/:username" element={<Profile />} />
+          <Route path="/manuscripts/:manuscriptId" element={<Manuscript />} />
+          <Route path="/manuscripts/:manuscriptId/read" element={<Reader />} />
+          <Route path="/explore" element={<Explore />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </Router>
