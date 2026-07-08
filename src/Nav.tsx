@@ -17,7 +17,7 @@ const Nav: React.FC = () => {
                             Dashboard
                         </Link>
                     ) : (
-                        <Link to="/login" className="m-1 mx-3 mb-4 link" title="Login">
+                        <Link to="/login" className="m-1 mx-4 mb-3 link" title="Login">
                             Login
                         </Link>
                     )}

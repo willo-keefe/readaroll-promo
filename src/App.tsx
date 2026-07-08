@@ -212,9 +212,9 @@ const Login: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleLogin = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    login(email, password);
+    await login(email, password);
   };
   useEffect(() => {
     const elements = document.querySelectorAll(".slide-up");
@@ -1211,8 +1211,8 @@ const Explore: React.FC = () => {
 }
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <Routes>
           <Route path="" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -1229,8 +1229,8 @@ function App() {
           <Route path="/explore" element={<Explore />} />
           <Route path="*" element={<Home />} />
         </Routes>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 export default App;

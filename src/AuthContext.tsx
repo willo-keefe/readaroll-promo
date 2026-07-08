@@ -7,6 +7,7 @@ const AuthContext = createContext<any>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const navigate = useNavigate();
     const MySwal = withReactContent(Swal);
 
     useEffect(() => {
@@ -18,7 +19,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const login = async (email: string, password: string) => {
-        const navigate = useNavigate();
         try {
             const res = await fetch("https://readaroll-backend-production.up.railway.app/login", {
                 method: "POST",
@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             });
             if ('requiresTwoFacctor' in res && (res as any).requiresTwoFactor) {
                 navigate('/2fa/challenge', { state: { pendingToken: (res as any).pendingToken } });
+                return;
             }
             setIsAuthenticated(true);
             navigate('/dashboard');
