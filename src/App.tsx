@@ -1075,7 +1075,9 @@ const Reader: React.FC = () => {
   }, []);
   return (
     <div className="container text-center slide-up hidden">
-
+      {manuscript && (
+        <p>Placeholder for manuscript content</p>
+      )}
     </div>
   );
 };
