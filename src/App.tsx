@@ -863,11 +863,95 @@ type Cover = {
   author: string;
   pageCount: number;
   thumbnailUrl: string;
+  rating_avg: number;
+  rating_count: number;
 };
+
+function StarModal({ isOpen, manuscriptId, currentRating, onClose, onSuccess }: { isOpen: boolean; manuscriptId: string; currentRating: number; onClose: () => void; onSuccess: (ratingAvg: number, ratingCount: number) => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [selected, setSelected] = useState<number>(currentRating ?? 0);
+  const [hovered, setHovered] = useState<number>(0);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const MySwal = withReactContent(Swal);
+
+  const activeRating = hovered || selected;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (isOpen) {
+      dialog.showModal();
+    }
+    else {
+      dialog.close();
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async () => {
+    if (!selected) {
+      MySwal.fire("Please select a rating before submitting.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/rate`, {
+        method: "POST",
+        credentials: "include",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: selected }),
+      });
+      if (!res.ok) {
+        MySwal.fire("There was an error submitting your rating. Please try again.");
+      }
+      const data = await res.json();
+      onSuccess(data.rating_avg, data.rating_count);
+      onClose();
+    }
+    catch (err: any) {
+      console.error(err);
+      MySwal.fire("There was an error submitting your rating. Please try again.");
+    }
+    finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <dialog ref={dialogRef} onClose={onClose} style={{ border: 'none', borderRadius: 8, padding: 20, width: '300px', textAlign: 'center' }}>
+      <h3>Rate this Manuscript</h3>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 24, transition: 'color 0.1s, transform 0.1s', padding: 2 }}
+            onClick={() => setSelected(star)}
+            onMouseEnter={() => setHovered(star)}
+            onMouseLeave={() => setHovered(0)}
+          >
+            <i className={star <= activeRating ? "fa-solid fa-star" : "fa-regular fa-star"}></i>
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
+        <button className="rounded m-3 p-3 w-25 border-none" onClick={onClose} disabled={submitting}>
+          Close
+        </button>
+        <button className="rounded m-3 p-3 w-25 border-none" onClick={handleSubmit} disabled={submitting || !selected}>
+          {submitting ? 'Submitting...' : currentRating ? 'Update Rating' : 'Submit Rating'}
+        </button>
+      </div>
+    </dialog>
+  );
+}
 
 const Manuscript: React.FC = () => {
   const { manuscriptId } = useParams();
   const [manuscript, setManuscript] = useState<Cover | null>(null);
+  const [showRatingModal, setShowRatingModal] = useState<boolean>(false);
+  const [ratingAvg, setRatingAvg] = useState<number>(0);
+  const [ratingCount, setRatingCount] = useState<number>(0);
   const MySwal = withReactContent(Swal);
 
   useEffect(() => {
@@ -881,6 +965,8 @@ const Manuscript: React.FC = () => {
       return r.json();
     }).then(data => {
       setManuscript(data);
+      setRatingAvg(data.rating_avg);
+      setRatingCount(data.rating_count);
     }).catch(error => {
       console.error(error);
       MySwal.fire("There was an error fetching the manuscript.");
@@ -912,19 +998,62 @@ const Manuscript: React.FC = () => {
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-6 p-4">
-
+          <h4 className="m-1 mb-4">{manuscript?.title}</h4>
+          <img src={manuscript?.thumbnailUrl} alt="Cover" style={{ width: 160, height: 240, objectFit: 'cover' }} />
+          <p className="home-list border-top p-2 py-3">{manuscript?.description}</p>
         </div>
         <div className="col-sm-6 p-4">
-
+          <p className="home-list border-top p-2 py-3">Author: {manuscript?.author}</p>
+          <p className="home-list border-top p-2 py-3">Page Count: {manuscript?.pageCount}</p>
+        </div>
+      </div>
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4">
+          <p className="home-list border-top p-2 py-3">Rating: {ratingAvg?.toFixed(2)} ({ratingCount} reviews)</p>
+          <button className="rounded m-3 p-3 w-25 border-none" onClick={() => setShowRatingModal(true)}>
+            {manuscript?.rating_count ? 'Update Rating' : 'Rate this Manuscript'}
+          </button>
         </div>
       </div>
       <Footer />
+      {showRatingModal && manuscript && (
+        <StarModal isOpen={showRatingModal} manuscriptId={manuscript.id} currentRating={manuscript.rating_avg} onClose={() => setShowRatingModal(false)} onSuccess={(avg, count) => {
+          setRatingAvg(avg);
+          setRatingCount(count);
+        }} />
+      )}
     </div>
   );
 };
 
+type ReadCover = {
+  id: string;
+  title: string;
+  description: string;
+  manuscriptUrl: string;
+};
+
 const Reader: React.FC = () => {
   const { manuscriptId } = useParams();
+  const [manuscript, setManuscript] = useState<ReadCover | null>(null);
+  const MySwal = withReactContent(Swal);
+
+  useEffect(() => {
+    fetch(`readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/read`, {
+      method: "GET",
+      credentials: "include",
+    }).then(r => {
+      if (!r.ok) {
+        MySwal.fire("There was an error fetching the manuscript for reading.");
+      }
+      return r.json();
+    }).then(data => {
+      setManuscript(data);
+    }).catch(error => {
+      console.error(error);
+      MySwal.fire("There was an error fetching the manuscript for reading.");
+    });
+  }, []);
 
   useEffect(() => {
     const elements = document.querySelectorAll(".slide-up");
