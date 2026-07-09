@@ -201,7 +201,7 @@ const Join: React.FC = () => {
 };
 
 const Login: React.FC = () => {
-  const { isAuthenticated, login } = useContext(AuthContext);
+  const { isAuthenticated, setIsAuthenticated, login } = useContext(AuthContext);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const navigate = useNavigate();
@@ -214,7 +214,17 @@ const Login: React.FC = () => {
 
   const handleLogin = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    await login(email, password);
+    try {
+      const data = await login(email, password);
+      if (data.requiresTwoFactor) {
+        navigate('/2fa/challenge', { state: { pendingToken: data.pendingToken } });
+        return;
+      }
+      setIsAuthenticated(true);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Login Error", error);
+    }
   };
   useEffect(() => {
     const elements = document.querySelectorAll(".slide-up");
@@ -342,11 +352,11 @@ const Dashboard: React.FC = () => {
       <Nav />
       <h1 className="mx-auto p-2">ReadaRoll Dashboard</h1>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
-      <div className="row px-5 pt-2 m-2 slide-up hidden border rounded">
+      <div className="row px-5 pt-2 m-2 mt-5 slide-up hidden border border-4 rounded-pill">
         <div className="col-sm-12 p-2">
-          <input type="text" name="display_name" className="m-3 p-2 w-50 rounded" style={{ textAlign: 'center' }} value={user.display_name} placeholder="Display Name..." onChange={handleFieldChange} />
+          <input type="text" name="display_name" className="m-3 p-2 w-50 rounded" style={{ textAlign: 'center' }} value={user.display_name ?? ''} placeholder="Display Name..." onChange={handleFieldChange} />
           <h4 className="m-1 mb-4">{user ? user.username : 'Unknown'}</h4>
-          <textarea className="m-1 p-2 w-75 rounded" style={{ textAlign: 'center' }} name="description" placeholder="User Description..." value={user.description} onChange={handleFieldChange} />
+          <textarea className="m-1 p-2 w-75 rounded" style={{ textAlign: 'center' }} name="description" placeholder="User Description..." value={user.description ?? ''} onChange={handleFieldChange} />
           <br />
           <button className="rounded m-3 p-3 w-25 border-none" onClick={handleSubmit}>
             Save
@@ -354,7 +364,7 @@ const Dashboard: React.FC = () => {
         </div>
         <Link to="/2fa/setup" className="m-3 link">Enable Two Factor Authentication</Link>
       </div>
-      <button className="rounded m-1 p-3 w-50 border-none" onClick={logout}>Logout</button>
+      <button className="rounded m-1 mt-5 p-3 w-50 border-none" onClick={logout}>Logout</button>
       <Footer />
     </div>
   );
@@ -441,7 +451,7 @@ const TwoFactorAuthSetup: React.FC = () => {
           <div className="col-sm-12 p-4">
             <h4 className="m-1 mt-3">2FA Enabled</h4>
             <p className="p-2 py-3">Save these backup codes somewhere safe. Each can only be used once.</p>
-            <ul>
+            <ul style={{ listStyleType: 'none', padding: 10, backgroundColor: 'black', borderRadius: 5, border: '1px solid #dee2e6' }}>
               {backupCodes.map(c => (
                 <li key={c}>
                   <code>
@@ -452,6 +462,7 @@ const TwoFactorAuthSetup: React.FC = () => {
             </ul>
           </div>
         </div>
+        <p className="p-2 py-3"><i className="fa-solid fa-copy" onClick={() => navigator.clipboard.writeText(backupCodes.join('\n'))}></i></p>
         <Footer />
       </div>
     );
@@ -1211,8 +1222,8 @@ const Explore: React.FC = () => {
 }
 function App() {
   return (
-    <Router>
-      <AuthProvider>
+    <AuthProvider>
+      <Router>
         <Routes>
           <Route path="" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -1229,8 +1240,8 @@ function App() {
           <Route path="/explore" element={<Explore />} />
           <Route path="*" element={<Home />} />
         </Routes>
-      </AuthProvider>
-    </Router>
+      </Router>
+    </AuthProvider>
   );
 }
 export default App;

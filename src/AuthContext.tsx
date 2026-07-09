@@ -1,5 +1,4 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -7,7 +6,6 @@ const AuthContext = createContext<any>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const navigate = useNavigate();
     const MySwal = withReactContent(Swal);
 
     useEffect(() => {
@@ -26,12 +24,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
-            if ('requiresTwoFacctor' in res && (res as any).requiresTwoFactor) {
-                navigate('/2fa/challenge', { state: { pendingToken: (res as any).pendingToken } });
-                return;
+            if (!res.ok) {
+                MySwal.fire("Your login attempt was not successful. Please try again.");
             }
-            setIsAuthenticated(true);
-            navigate('/dashboard');
+            const data = await res.json();
+
+            return data; // Return the response data for further handling (e.g., MFA)
         }
         catch (err: any) {
             console.error("Login Error", err);
@@ -53,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+        <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, login, logout }}>
             {children}
         </AuthContext.Provider>
     );
