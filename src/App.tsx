@@ -804,12 +804,12 @@ const Upload: React.FC = () => {
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-12 p-4">
-          <div onClick={() => coverInputRef.current?.click()} style={{ cursor: 'pointer' }}>
+          <div onClick={() => coverInputRef.current?.click()} style={{ cursor: 'pointer', marginBottom: 20, justifyContent: 'center', display: 'flex', alignItems: 'center' }}>
             {coverPreview ? (
               <img src={coverPreview} alt="Cover Preview" style={{ width: 160, height: 240, objectFit: 'cover' }} />
             ) : (
               <div style={{ width: 160, height: 240, border: '2px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span>Click to add cover</span>
+                <span>Click to add cover (800x1200 recommended)</span>
               </div>
             )}
           </div>
