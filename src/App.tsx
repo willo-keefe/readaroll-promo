@@ -273,6 +273,7 @@ interface User {
   display_name: string;
   email: string;
   description: string;
+  two_fa_enabled: boolean;
 }
 
 const Dashboard: React.FC = () => {
@@ -283,6 +284,7 @@ const Dashboard: React.FC = () => {
     display_name: '',
     email: '',
     description: '',
+    two_fa_enabled: false,
   });
   const MySwal = withReactContent(Swal);
   const navigate = useNavigate();
@@ -312,11 +314,11 @@ const Dashboard: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
-      const res = await fetch("readaroll-backend-production.up.railway.app/profile", {
+      const res = await fetch("https://readaroll-backend-production.up.railway.app/profile", {
         method: "PUT",
         credentials: "include",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: user.description, displayName: user.display_name }),
+        body: JSON.stringify({ description: user.description ?? '', displayName: user.display_name ?? '' }),
       });
       if (!res.ok) {
         MySwal.fire("There was an error saving your profile information. Please try again.");
@@ -325,7 +327,7 @@ const Dashboard: React.FC = () => {
     }
     catch (err: any) {
       console.error(err);
-      MySwal.fire("There was an error saving your profile info. Please try again.");
+      MySwal.fire("There was an error saving your profile information. Please try again.");
     }
   };
 
@@ -362,7 +364,11 @@ const Dashboard: React.FC = () => {
             Save
           </button>
         </div>
-        <Link to="/2fa/setup" className="m-3 link">Enable Two Factor Authentication</Link>
+        {!user.two_fa_enabled ? (
+          <Link to="/2fa/setup" className="m-3 link">Enable Two Factor Authentication</Link>
+        ) : (
+          <Link to="/2fa/disable" className="m-3 link">Disable Two Factor Authentication</Link>
+        )}
       </div>
       <button className="rounded m-1 mt-5 p-3 w-50 border-none" onClick={logout}>Logout</button>
       <Footer />
@@ -488,6 +494,49 @@ const TwoFactorAuthSetup: React.FC = () => {
         </div>
       </div>
       <button className="rounded m-3 p-3 w-25 border-none" onClick={confirm}>Confirm</button>
+      <Footer />
+    </div>
+  );
+};
+
+const TwoFactorAuthDisable: React.FC = () => {
+  const [token, setToken] = useState<string>('');
+  const MySwal = withReactContent(Swal);
+  const navigate = useNavigate();
+
+  async function disable() {
+    try {
+      const res = await fetch("https://readaroll-backend-production.up.railway.app/mfa/disable", {
+        method: "POST",
+        credentials: "include",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      if (!res.ok) {
+        MySwal.fire("There was an error disabling 2FA. Please try again.");
+      }
+      MySwal.fire("Two Factor Authentication has been disabled.");
+      navigate('/dashboard');
+    }
+    catch (err: any) {
+      console.error('2FA error', err);
+      MySwal.fire("There was an error disabling 2FA. Please try again.");
+    }
+  }
+
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">ReadaRoll Dashboard</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4">
+          <h4 className="m-1 mt-3">Disable Two Factor Authentication</h4>
+          <p className="p-2 py-3">Enter the 6 digit code from your authenticator app to disable 2FA.</p>
+          <input type="text" name="token" inputMode="numeric" className="m-1 p-2 w-25 rounded" maxLength={6} placeholder="6 Digit Code" value={token} onChange={e => setToken(e.target.value)} />
+        </div>
+      </div>
+      <button className="rounded m-3 p-3 w-25 border-none" onClick={disable}>Disable 2FA</button>
       <Footer />
     </div>
   );
@@ -721,7 +770,7 @@ const Upload: React.FC = () => {
       setProgress(0);
     });
 
-    xhr.open('POST', 'readaroll-backend-production.up.railway.app/upload');
+    xhr.open('POST', 'https://readaroll-backend-production.up.railway.app/upload');
     xhr.withCredentials = true;
     xhr.send(formData);
   };
@@ -817,11 +866,12 @@ const Profile: React.FC = () => {
     display_name: '',
     email: '',
     description: '',
+    two_fa_enabled: false,
   });
   const MySwal = withReactContent(Swal);
 
   useEffect(() => {
-    fetch(`readaroll-backend-production.up.railway.app/users/${username}`, {
+    fetch(`https://readaroll-backend-production.up.railway.app/users/${username}`, {
       method: "GET",
       credentials: "include"
     }).then(r => r.json()).then(data => {
@@ -855,10 +905,10 @@ const Profile: React.FC = () => {
       <Nav />
       <h1 className="mx-auto p-2">ReadaRoll</h1>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
-      <div className="row px-5 pt-2 m-2 slide-up hidden">
-        <div className="col-sm-12 p-4">
+      <div className="row px-5 pt-1 m-2 slide-up hidden">
+        <div className="col-sm-12 p-1">
           <h4 className="m-1 mb-4">{user.display_name}</h4>
-          <h4 className="m-1 mb-4">{user ? user.username : 'Unknown User'}</h4>
+          <h6 className="m-1 mb-4">{user ? user.username : 'Unknown User'}</h6>
           <p className="home-list border-top p-2 py-3">{user.description}</p>
         </div>
       </div>
@@ -907,7 +957,7 @@ function StarModal({ isOpen, manuscriptId, currentRating, onClose, onSuccess }: 
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/rate`, {
+      const res = await fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/rate`, {
         method: "POST",
         credentials: "include",
         headers: { 'Content-Type': 'application/json' },
@@ -966,7 +1016,7 @@ const Manuscript: React.FC = () => {
   const MySwal = withReactContent(Swal);
 
   useEffect(() => {
-    fetch(`readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}`, {
+    fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}`, {
       method: "GET",
       credentials: "include",
     }).then(r => {
@@ -1050,7 +1100,7 @@ const Reader: React.FC = () => {
   const MySwal = withReactContent(Swal);
 
   useEffect(() => {
-    fetch(`readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/read`, {
+    fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/read`, {
       method: "GET",
       credentials: "include",
     }).then(r => {
@@ -1102,7 +1152,7 @@ const Explore: React.FC = () => {
   const MySwal = withReactContent(Swal);
 
   useEffect(() => {
-    fetch("readaroll-backend-production.up.railway.app/trending", {
+    fetch("https://readaroll-backend-production.up.railway.app/trending", {
       method: "GET",
       credentials: "include",
     }).then(r => {
@@ -1117,7 +1167,7 @@ const Explore: React.FC = () => {
       MySwal.fire("There was an error fetching the most recent trending text.");
     });
 
-    fetch("readaroll-backend-production.up.railway.app/recent", {
+    fetch("https://readaroll-backend-production.up.railway.app/recent", {
       method: "GET",
       credentials: "include",
     }).then(r => {
@@ -1134,7 +1184,7 @@ const Explore: React.FC = () => {
   }, []);
 
   const loadMore = async () => {
-    const res = await fetch(`readaroll-backend-production.up.railway.app/library?cursor=${cursor || 0}`, {
+    const res = await fetch(`https://readaroll-backend-production.up.railway.app/library?cursor=${cursor || 0}`, {
       method: "GET",
       credentials: "include",
     });
@@ -1147,7 +1197,7 @@ const Explore: React.FC = () => {
     if (!search || search.trim().length === 0) {
       return;
     }
-    const res = await fetch(`readaroll-backend-production.up.railway.app/search?query=${encodeURIComponent(search)}`, {
+    const res = await fetch(`https://readaroll-backend-production.up.railway.app/search?query=${encodeURIComponent(search)}`, {
       method: "GET",
       credentials: "include",
     });
@@ -1231,6 +1281,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/2fa/setup" element={<TwoFactorAuthSetup />} />
+          <Route path="/2fa/disable" element={<TwoFactorAuthDisable />} />
           <Route path="/2fa/challenge" element={<TwoFactorAuthChallenge />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/library" element={<Library />} />
