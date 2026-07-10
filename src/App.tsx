@@ -370,7 +370,7 @@ const Dashboard: React.FC = () => {
           <Link to="/2fa/disable" className="m-3 link">Disable Two Factor Authentication</Link>
         )}
       </div>
-      <button className="rounded m-1 mt-5 p-3 w-50 border-none" onClick={logout}>Logout</button>
+      <button className="rounded m-1 mt-5 p-3 w-50 border-none" onClick={() => logout().catch(() => {})}>Logout</button>
       <Footer />
     </div>
   );
@@ -524,6 +524,25 @@ const TwoFactorAuthDisable: React.FC = () => {
     }
   }
 
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div className="container text-center slide-up hidden">
       <Nav />
@@ -547,7 +566,7 @@ interface Props {
   onSuccess: () => void;
 };
 
-async function TwoFactorChallenge({ pendingToken, onSuccess }: Props) {
+function TwoFactorChallenge({ pendingToken, onSuccess }: Props) {
   const [totpToken, setTotpToken] = useState<string>('');
   const [backupCode, setBackupCode] = useState<string>('');
   const [useBackup, setUsedBackup] = useState<boolean>(false);
@@ -571,11 +590,6 @@ async function TwoFactorChallenge({ pendingToken, onSuccess }: Props) {
       MySwal.fire("There was an error authenticating your account. Please try again.");
     }
   }
-
-  useEffect(() => {
-
-  }, []);
-
   return (
     <div className="container text-center slide-up hidden">
       <Nav />
@@ -589,8 +603,10 @@ async function TwoFactorChallenge({ pendingToken, onSuccess }: Props) {
           ) : (
             <input type="text" name="backupCode" className="m-3 p-2 w-25 rounded" placeholder="XXXXX-XXXXX backup code" value={backupCode} onChange={e => setBackupCode(e.target.value)} />
           )}
-          <button onClick={submit} className="rounded m-3 p-3 w-25 border-none">Verify</button>
-          <button onClick={() => setUsedBackup(v => !v)}>
+          <br />
+          <button onClick={submit} className="rounded m-3 mt-4 p-3 w-25 border-none">Verify</button>
+          <br />
+          <button className="rounded m-3 mt-4 p-3 w-25 border-none" onClick={() => setUsedBackup(v => !v)}>
             {useBackup ? 'Use authenticator app instead' : 'Use a backup code'}
           </button>
         </div>
@@ -605,6 +621,7 @@ interface LocationState {
 };
 
 const TwoFactorAuthChallenge: React.FC = () => {
+  const { setIsAuthenticated } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as LocationState | null;
@@ -620,8 +637,30 @@ const TwoFactorAuthChallenge: React.FC = () => {
     return null;
   }
 
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   return (
-    <TwoFactorChallenge pendingToken={pendingToken} onSuccess={() => navigate('/dashboard')} />
+    <TwoFactorChallenge pendingToken={pendingToken} onSuccess={() => {
+      setIsAuthenticated(true);
+      navigate('/dashboard');
+    }} />
   );
 };
 
@@ -712,7 +751,7 @@ const Upload: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    if (!manuscript || !cover) {
+    if (!manuscript) {
       MySwal.fire("You must have a manuscript and a cover file uploaded.");
       return;
     }
@@ -725,10 +764,12 @@ const Upload: React.FC = () => {
 
     const formData = new FormData();
     formData.append('manuscript', manuscript);
-    formData.append('cover', cover);
     formData.append('title', fields.title.trim());
     formData.append('author', fields.author.trim() || 'Anonymous');
     formData.append('description', fields.description.trim());
+    if (cover) {
+      formData.append('cover', cover);
+    } 
     if (fields.pageCount) {
       formData.append('page_count', fields.pageCount);
     }
@@ -851,9 +892,69 @@ const Upload: React.FC = () => {
 };
 
 const Library: React.FC = () => {
-  return (
-    <div>
+  const [library, setLibrary] = useState<Cover[]>([]);
+  const MySwal = withReactContent(Swal);
 
+  useEffect(() => {
+    fetch("https://readaroll-backend-production.up.railway.app/users/library", {
+      method: "GET",
+      credentials: "include"
+    }).then(r => {
+      if (!r.ok) {
+        MySwal.fire("There was an error getting your library. Please try reloading.");
+      }
+      return r.json();
+    }).then(data => {
+      setLibrary(data);
+    }).catch(error => {
+      console.error(error);
+      MySwal.fire("There was an error getting your library. Please try reloading.");
+    });
+  }, []);
+
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">ReadaRoll Library</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        {library.length === 0 ? (
+          <p className="p-2 py-3">Your library is empty. Start by uploading a manuscript!</p>
+        ) : (
+          library.map((cover) => (
+            <div key={cover.id} className="col-sm-6 col-md-4 col-lg-3 p-2">
+              <Link to={`/manuscripts/${cover.id}`} className="text-decoration-none text-dark">
+                <div className="card h-100">
+                  <img src={cover.cover_path} className="card-img-top" alt={`${cover.title} cover`} />
+                  <div className="card-body">
+                    <h5 className="card-title">{cover.title}</h5>
+                    <p className="card-text">{cover.author}</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          ))
+        )}
+      </div>
+      <Footer />
     </div>
   );
 };
@@ -922,8 +1023,8 @@ type Cover = {
   title: string;
   description: string;
   author: string;
-  pageCount: number;
-  thumbnailUrl: string;
+  page_count: number;
+  cover_path: string;
   rating_avg: number;
   rating_count: number;
 };
@@ -1060,17 +1161,17 @@ const Manuscript: React.FC = () => {
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-6 p-4">
           <h4 className="m-1 mb-4">{manuscript?.title}</h4>
-          <img src={manuscript?.thumbnailUrl} alt="Cover" style={{ width: 160, height: 240, objectFit: 'cover' }} />
+          <img src={manuscript?.cover_path} alt="Cover" style={{ width: 160, height: 240, objectFit: 'cover' }} />
           <p className="home-list border-top p-2 py-3">{manuscript?.description}</p>
         </div>
         <div className="col-sm-6 p-4">
           <p className="home-list border-top p-2 py-3">Author: {manuscript?.author}</p>
-          <p className="home-list border-top p-2 py-3">Page Count: {manuscript?.pageCount}</p>
+          <p className="home-list border-top p-2 py-3">Page Count: {manuscript?.page_count}</p>
         </div>
       </div>
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-12 p-4">
-          <p className="home-list border-top p-2 py-3">Rating: {ratingAvg?.toFixed(2)} ({ratingCount} reviews)</p>
+          <p className="home-list border-top p-2 py-3">Rating: {ratingAvg.toFixed(2)} ({ratingCount} reviews)</p>
           <button className="rounded m-3 p-3 w-25 border-none" onClick={() => setShowRatingModal(true)}>
             {manuscript?.rating_count ? 'Update Rating' : 'Rate this Manuscript'}
           </button>
@@ -1091,7 +1192,7 @@ type ReadCover = {
   id: string;
   title: string;
   description: string;
-  manuscriptUrl: string;
+  manuscript_path: string;
 };
 
 const Reader: React.FC = () => {
