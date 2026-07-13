@@ -1232,6 +1232,7 @@ const Manuscript: React.FC = () => {
   const [ratingAvg, setRatingAvg] = useState<number>(0);
   const [ratingCount, setRatingCount] = useState<number>(0);
   const MySwal = withReactContent(Swal);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}`, {
@@ -1251,6 +1252,30 @@ const Manuscript: React.FC = () => {
       MySwal.fire("There was an error fetching the manuscript.");
     });
   }, []);
+
+  const handleGetManuscript = async () => {
+    try {
+      const res = await fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/get`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        MySwal.fire("There was an error getting the manuscript. Please try again.");
+        return;
+      }
+      const data = await res.json();
+      MySwal.fire({
+        title: "Manuscript Retrieved",
+        text: data.message ?? "You have successfully retrieved the manuscript.",
+        icon: "success",
+      });
+      navigate('/library');
+    }
+    catch (err: any) {
+      console.error(err);
+      MySwal.fire("There was an error getting the manuscript. Please try again.");
+    }
+  };
 
   useEffect(() => {
     const elements = document.querySelectorAll(".slide-up");
@@ -1303,9 +1328,9 @@ const Manuscript: React.FC = () => {
       </div>
       <div className="row px-5 pt-2 m-2 slide-up hidden">
           <div className="col-sm-12 p-4">
-            <Link to={`/manuscripts/${manuscriptId}/read`} className="rounded m-3 p-3 w-25 border-none text-decoration-none text-dark">
-              Read
-            </Link>
+            <button className="rounded m-3 p-3 w-25 border-none" onClick={handleGetManuscript}>
+              Get <i className="fa-solid fa-book"></i>
+            </button>
           </div>
       </div>
       <Footer />
