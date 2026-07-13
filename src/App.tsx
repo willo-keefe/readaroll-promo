@@ -937,13 +937,20 @@ const Library: React.FC = () => {
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         {library.length === 0 ? (
-          <p className="p-2 py-3">Your library is empty. Start by uploading a manuscript!</p>
+          <p className="p-2 py-3">Your library is empty. Start by getting a manuscript!</p>
         ) : (
           library.map((cover) => (
             <div key={cover.id} className="col-sm-6 col-md-4 col-lg-3 p-2">
               <Link to={`/manuscripts/${cover.id}`} className="text-decoration-none text-dark">
                 <div className="card h-100">
-                  <img src={cover.cover_path} className="card-img-top" alt={`${cover.title} cover`} />
+                  {cover?.cover_path ? (
+                    <img src={cover.cover_path} className="card-img-top" alt={`${cover.title} cover`} />
+                  ) : (
+                    <div className="card-img-top bg-light d-flex align-items-center justify-content-center" style={{ height: '240px' }}>
+                      <span className="m-3">{cover.title}</span>
+                      <span className="m-3">{cover.author}</span>
+                    </div>
+                  )}
                   <div className="card-body">
                     <h5 className="card-title">{cover.title}</h5>
                     <p className="card-text">{cover.author}</p>
@@ -953,6 +960,116 @@ const Library: React.FC = () => {
             </div>
           ))
         )}
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+const CreatorDashboard: React.FC = () => {
+  const [manuscripts, setManuscripts] = useState<Cover[]>([]);
+  const MySwal = withReactContent(Swal);
+
+  useEffect(() => {
+    fetch("https://readaroll-backend-production.up.railway.app/users/manuscripts", {
+      method: "GET",
+      credentials: "include"
+    }).then(r => {
+      if (!r.ok) {
+        MySwal.fire("There was an error getting your manuscripts. Please try reloading.");
+      }
+      return r.json();
+    }).then(data => {
+      setManuscripts(data);
+    }).catch(error => {
+      console.error(error);
+      MySwal.fire("There was an error getting your manuscripts. Please try reloading.");
+    });
+  }, []);
+
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">ReadaRoll Creator Dashboard</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        {manuscripts.length === 0 ? (
+          <p className="p-2 py-3">You have not uploaded any manuscripts yet. Start by uploading one!</p>
+        ) : (
+          manuscripts.map((cover) => (
+            <div key={cover.id} className="col-sm-6 col-md-4 col-lg-3 p-2">
+              <Link to={`/manuscripts/${cover.id}/edit`} className="text-decoration-none text-dark">
+                <div className="card h-100">
+                  {cover?.cover_path ? (
+                    <img src={cover.cover_path} className="card-img-top" alt={`${cover.title} cover`} />
+                  ) : (
+                    <div className="card-img-top bg-light d-flex align-items-center justify-content-center" style={{ height: '240px' }}>
+                      <span className="m-3">{cover.title}</span>
+                      <span className="m-3">{cover.author}</span>
+                    </div>
+                  )}
+                  <div className="card-body">
+                    <h5 className="card-title">{cover.title}</h5>
+                    <p className="card-text">{cover.author}</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          ))
+        )}
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+const NotFound: React.FC = () => {
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">ReadaRoll</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4">
+          <h4 className="m-1 mt-3">404 - Page Not Found</h4>
+          <p className="p-2 py-3">The page you are looking for does not exist.</p>
+        </div>
       </div>
       <Footer />
     </div>
@@ -1018,13 +1135,13 @@ const Profile: React.FC = () => {
   );
 };
 
-type Cover = {
+interface Cover {
   id: string;
   title: string;
   description: string;
   author: string;
   page_count: number;
-  cover_path: string;
+  cover_path: string | null;
   rating_avg: number;
   rating_count: number;
 };
@@ -1161,7 +1278,14 @@ const Manuscript: React.FC = () => {
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-6 p-4">
           <h4 className="m-1 mb-4">{manuscript?.title}</h4>
-          <img src={manuscript?.cover_path} alt="Cover" style={{ width: 160, height: 240, objectFit: 'cover' }} />
+          {manuscript?.cover_path ? (
+            <img src={manuscript.cover_path} alt="Cover" style={{ width: 160, height: 240, objectFit: 'cover' }} />
+          ) : (
+            <div style={{ width: 160, height: 240, border: '2px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="m-3">{manuscript?.title}</span>
+              <span className="m-3">{manuscript?.author}</span>
+            </div>
+          )}
           <p className="home-list border-top p-2 py-3">{manuscript?.description}</p>
         </div>
         <div className="col-sm-6 p-4">
@@ -1177,6 +1301,13 @@ const Manuscript: React.FC = () => {
           </button>
         </div>
       </div>
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+          <div className="col-sm-12 p-4">
+            <Link to={`/manuscripts/${manuscriptId}/read`} className="rounded m-3 p-3 w-25 border-none text-decoration-none text-dark">
+              Read
+            </Link>
+          </div>
+      </div>
       <Footer />
       {showRatingModal && manuscript && (
         <StarModal isOpen={showRatingModal} manuscriptId={manuscript.id} currentRating={manuscript.rating_avg} onClose={() => setShowRatingModal(false)} onSuccess={(avg, count) => {
@@ -1188,7 +1319,110 @@ const Manuscript: React.FC = () => {
   );
 };
 
-type ReadCover = {
+const EditManuscript: React.FC = () => {
+  const { manuscriptId } = useParams();
+  const [manuscript, setManuscript] = useState<Cover | null>(null);
+  const [fields, setFields] = useState<FormFields>({
+    title: '',
+    description: '',
+    author: '',
+    pageCount: '',
+  });
+  const MySwal = withReactContent(Swal);
+  const navigate = useNavigate();
+
+  const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFields(prev => ({ ...prev, [name]: value ?? '' }));
+  };
+
+  useEffect(() => {
+    fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}`, {
+      method: "GET",
+      credentials: "include",
+    }).then(r => {
+      if (!r.ok) {
+        MySwal.fire("There was an error fetching the manuscript.");
+      }
+      return r.json();
+    }).then(data => {
+      setManuscript(data);
+      setFields({
+        title: data.title,
+        description: data.description,
+        author: data.author,
+        pageCount: data.page_count
+      });
+    }).catch(error => {
+      console.error(error);
+      MySwal.fire("There was an error fetching the manuscript.");
+    });
+  }, [manuscriptId]);
+
+  const handleSubmit = async () => {
+    if (!fields.title.trim()) {
+      MySwal.fire("A title is required for the work.");
+      return;
+    }
+    try {
+      const res = await fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      });
+      if (!res.ok) {
+        MySwal.fire("There was an error updating the manuscript.");
+      }
+      MySwal.fire("Manuscript updated successfully!");
+      navigate(`/manuscript/${manuscriptId}`);
+    }
+    catch (err: any) {
+      console.error(err);
+      MySwal.fire("There was an error updating the manuscript. Please try again.");
+    }
+  };
+
+  useEffect(() => {
+    const elements = document.querySelectorAll(".slide-up");
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+            obs.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+  return (
+    <div className="container text-center slide-up hidden">
+      <Nav />
+      <h1 className="mx-auto p-2">ReadaRoll</h1>
+      <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
+      <div className="row px-5 pt-2 m-2 slide-up hidden">
+        <div className="col-sm-12 p-4">
+          <input className="m-1 p-2 w-50 rounded" type="text" name="title" placeholder="Title" value={manuscript?.title} onChange={handleFieldChange} />
+          <input className="m-1 p-2 w-50 rounded" type="author" name="author" placeholder="Author" value={manuscript?.author} onChange={handleFieldChange} />
+          <textarea className="m-1 p-2 w-50 rounded" name="description" placeholder="Description" value={manuscript?.description} onChange={handleFieldChange} />
+          <input className="m-1 p-2 w-50 rounded" name="pageCount" type="number" placeholder="Page Count" min={1} value={manuscript?.page_count} onChange={handleFieldChange} />
+          <button className="rounded m-3 p-3 w-25 border-none" onClick={handleSubmit}>
+            Update Manuscript
+          </button>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+interface ReadCover {
   id: string;
   title: string;
   description: string;
@@ -1381,6 +1615,7 @@ function App() {
           <Route path="/join" element={<Join />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/creator" element={<CreatorDashboard />} />
           <Route path="/2fa/setup" element={<TwoFactorAuthSetup />} />
           <Route path="/2fa/disable" element={<TwoFactorAuthDisable />} />
           <Route path="/2fa/challenge" element={<TwoFactorAuthChallenge />} />
@@ -1388,9 +1623,10 @@ function App() {
           <Route path="/library" element={<Library />} />
           <Route path="/users/:username" element={<Profile />} />
           <Route path="/manuscripts/:manuscriptId" element={<Manuscript />} />
+          <Route path="/manuscripts/:manuscriptId/edit" element={<EditManuscript />} />
           <Route path="/manuscripts/:manuscriptId/read" element={<Reader />} />
           <Route path="/explore" element={<Explore />} />
-          <Route path="*" element={<Home />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </AuthProvider>
