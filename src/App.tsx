@@ -154,17 +154,29 @@ const Join: React.FC = () => {
         });
         if (res.ok) {
           setLoading(false);
-          MySwal.fire("You have been registered, welcome! Please check your email to verify your account and begin.");
+          MySwal.fire({
+            title: "Welcome!",
+            text: "You have been registered, welcome! Please check your email to verify your account and begin.",
+            icon: "success",
+          });
         }
         else {
           setLoading(false);
-          MySwal.fire("There was an error signing up. Try again.");
+          MySwal.fire({
+            title: "Error",
+            text: "There was an error signing up. Try again.",
+            icon: "error",
+          });
         }
       }
       catch (error: any) {
         console.log(error);
         setLoading(false);
-        MySwal.fire("There was an error signing up.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error signing up. Try again.",
+          icon: "error",
+        });
       }
     }
     else {
@@ -306,28 +318,42 @@ const Dashboard: React.FC = () => {
       credentials: "include"
     }).then(r => r.json()).then(data => {
       setUser(data);
-    }).catch(error => {
-      console.error('There was an error fetching the user', error);
-      MySwal.fire("There was an error getting your information, please try reloading the dashboard.");
+    }).catch(() => {
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error getting your information, please try reloading the dashboard.",
+        icon: "error",
+      });
     });
   }, []);
 
   const handleSubmit = async () => {
     try {
       const res = await fetch("https://readaroll-backend-production.up.railway.app/profile", {
-        method: "PUT",
+        method: "PATCH",
         credentials: "include",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: user.description ?? '', displayName: user.display_name ?? '' }),
       });
       if (!res.ok) {
-        MySwal.fire("There was an error saving your profile information. Please try again.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error saving your profile information. Please try again.",
+          icon: "error",
+        });
       }
-      MySwal.fire("Your profile information was saved successfully!");
+      MySwal.fire({
+        title: "Success!",
+        text: "Your profile information was saved successfully!",
+        icon: "success",
+      });
     }
     catch (err: any) {
-      console.error(err);
-      MySwal.fire("There was an error saving your profile information. Please try again.");
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error saving your profile information. Please try again.",
+        icon: "error",
+      });
     }
   };
 
@@ -392,8 +418,11 @@ const TwoFactorAuthSetup: React.FC = () => {
         credentials: "include",
       });
       if (!res.ok) {
-        console.error("Error setting up 2fa");
-        MySwal.fire("The 2FA setup was not successful. Please try again.");
+        MySwal.fire({
+          title: "Error",
+          text: "The 2FA setup was not successful. Please try again.",
+          icon: "error",
+        });
       }
       const data = await res.json();
       setQrUrl(data.qrDataUrl);
@@ -402,8 +431,11 @@ const TwoFactorAuthSetup: React.FC = () => {
       console.log(qrUrl, manualKey);
     }
     catch (err: any) {
-      console.error('2FA error', err);
-      MySwal.fire("The 2FA setup was not successful. Please try again.");
+      MySwal.fire({
+        title: "Error",
+        text: "The 2FA setup was not successful. Please try again.",
+        icon: "error",
+      });
       setLoading(false);
     }
   }
@@ -417,14 +449,21 @@ const TwoFactorAuthSetup: React.FC = () => {
         body: JSON.stringify({ token }),
       });
       if (!res.ok) {
-        console.error("Error in 2FA setup.");
+        MySwal.fire({
+          title: "Error in 2FA Confirmation",
+          text: "The 2FA confirmation was not successful. Please try again.",
+          icon: "error",
+        });
       }
       const data = await res.json();
       setBackupCodes(data.backup_codes);
     }
     catch (err: any) {
-      console.error('2FA error', err);
-      MySwal.fire("The 2FA confirmation was not successful. Please try again.");
+      MySwal.fire({
+        title: "Error",
+        text: "The 2FA confirmation was not successful. Please try again.",
+        icon: "error",
+      });
     }
   }
 
@@ -513,14 +552,25 @@ const TwoFactorAuthDisable: React.FC = () => {
         body: JSON.stringify({ token }),
       });
       if (!res.ok) {
-        MySwal.fire("There was an error disabling 2FA. Please try again.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error disabling 2FA. Please try again.",
+          icon: "error",
+        });
       }
-      MySwal.fire("Two Factor Authentication has been disabled.");
+      MySwal.fire({
+        title: "Success",
+        text: "Two Factor Authentication has been disabled.",
+        icon: "success",
+      });
       navigate('/dashboard');
     }
     catch (err: any) {
-      console.error('2FA error', err);
-      MySwal.fire("There was an error disabling 2FA. Please try again.");
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error disabling 2FA. Please try again.",
+        icon: "error",
+      });
     }
   }
 
@@ -581,13 +631,20 @@ function TwoFactorChallenge({ pendingToken, onSuccess }: Props) {
         body: JSON.stringify({ pendingToken, ...(useBackup ? { backupCode } : { totpToken })}),
       });
       if (!res.ok) {
-        MySwal.fire("There was an error authenticating your account. Please try again");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error authenticating your account. Please try again",
+          icon: "error",
+        });
       }
       onSuccess();
     }
     catch (err: any) {
-      console.error('2FA error', err);
-      MySwal.fire("There was an error authenticating your account. Please try again.");
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error authenticating your account. Please try again.",
+        icon: "error",
+      });
     }
   }
   return (
@@ -793,17 +850,29 @@ const Upload: React.FC = () => {
         try {
           const data = JSON.parse(xhr.responseText);
           console.error(data.error ?? 'Upload failed');
-          MySwal.fire("Upload failed. Try again.");
+          MySwal.fire({
+            title: "Error",
+            text: "Upload failed. Try again.",
+            icon: "error",
+          });
         }
         catch {
-          MySwal.fire("Upload failed. Try again.");
+          MySwal.fire({
+            title: "Error",
+            text: "Upload failed. Try again.",
+            icon: "error",
+          });
         }
       }
     });
 
     xhr.addEventListener('error', () => {
       setUploading(false);
-      MySwal.fire("There was a network error. Please try again.");
+      MySwal.fire({
+        title: "Error",
+        text: "There was a network error. Please try again.",
+        icon: "error",
+      });
     });
 
     xhr.addEventListener('abort', () => {
@@ -901,14 +970,21 @@ const Library: React.FC = () => {
       credentials: "include"
     }).then(r => {
       if (!r.ok) {
-        MySwal.fire("There was an error getting your library. Please try reloading.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error getting your library. Please try reloading.",
+          icon: "error",
+        });
       }
       return r.json();
     }).then(data => {
       setLibrary(data);
-    }).catch(error => {
-      console.error(error);
-      MySwal.fire("There was an error getting your library. Please try reloading.");
+    }).catch(() => {
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error getting your library. Please try reloading.",
+        icon: "error",
+      });
     });
   }, []);
 
@@ -976,14 +1052,21 @@ const CreatorDashboard: React.FC = () => {
       credentials: "include"
     }).then(r => {
       if (!r.ok) {
-        MySwal.fire("There was an error getting your manuscripts. Please try reloading.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error getting your manuscripts. Please try reloading.",
+          icon: "error",
+        });
       }
       return r.json();
     }).then(data => {
       setManuscripts(data);
-    }).catch(error => {
-      console.error(error);
-      MySwal.fire("There was an error getting your manuscripts. Please try reloading.");
+    }).catch(() => {
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error getting your manuscripts. Please try reloading.",
+        icon: "error",
+      });
     });
   }, []);
 
@@ -1077,7 +1160,7 @@ const NotFound: React.FC = () => {
 };
 
 const Profile: React.FC = () => {
-  const { username } = useParams();
+  const { username } = useParams<{ username: string }>();
   const [user, setUser] = useState<User>({
     id: '',
     username: '',
@@ -1094,9 +1177,12 @@ const Profile: React.FC = () => {
       credentials: "include"
     }).then(r => r.json()).then(data => {
       setUser(data);
-    }).catch(error => {
-      console.error(error);
-      MySwal.fire("There was an error getting your profile information. Please try reloading.");
+    }).catch(() => {
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error getting your profile information. Please try reloading.",
+        icon: "error",
+      });
     })
   }, [username]);
 
@@ -1182,15 +1268,22 @@ function StarModal({ isOpen, manuscriptId, currentRating, onClose, onSuccess }: 
         body: JSON.stringify({ rating: selected }),
       });
       if (!res.ok) {
-        MySwal.fire("There was an error submitting your rating. Please try again.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error submitting your rating. Please try again.",
+          icon: "error",
+        });
       }
       const data = await res.json();
       onSuccess(data.rating_avg, data.rating_count);
       onClose();
     }
-    catch (err: any) {
-      console.error(err);
-      MySwal.fire("There was an error submitting your rating. Please try again.");
+    catch {
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error submitting your rating. Please try again.",
+        icon: "error",
+      });
     }
     finally {
       setSubmitting(false);
@@ -1226,7 +1319,7 @@ function StarModal({ isOpen, manuscriptId, currentRating, onClose, onSuccess }: 
 }
 
 const Manuscript: React.FC = () => {
-  const { manuscriptId } = useParams();
+  const { manuscriptId } = useParams<{ manuscriptId: string }>();
   const [manuscript, setManuscript] = useState<Cover | null>(null);
   const [showRatingModal, setShowRatingModal] = useState<boolean>(false);
   const [ratingAvg, setRatingAvg] = useState<number>(0);
@@ -1240,16 +1333,23 @@ const Manuscript: React.FC = () => {
       credentials: "include",
     }).then(r => {
       if (!r.ok) {
-        MySwal.fire("There was an error fetching the manuscript.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error fetching the manuscript.",
+          icon: "error",
+        });
       }
       return r.json();
     }).then(data => {
       setManuscript(data);
       setRatingAvg(data.rating_avg);
       setRatingCount(data.rating_count);
-    }).catch(error => {
-      console.error(error);
-      MySwal.fire("There was an error fetching the manuscript.");
+    }).catch(() => {
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error fetching the manuscript.",
+        icon: "error",
+      });
     });
   }, []);
 
@@ -1259,8 +1359,17 @@ const Manuscript: React.FC = () => {
         method: "POST",
         credentials: "include",
       });
+      if (res.status === 409) {
+        MySwal.fire("You already have access to this manuscript.");
+        navigate(`/manuscripts/${manuscriptId}/read`);
+        return;
+      }
       if (!res.ok) {
-        MySwal.fire("There was an error getting the manuscript. Please try again.");
+        MySwal.fire({
+          title: "Error Getting Manuscript",
+          text: "There was an error retrieving this manuscript. Please try again",
+          icon: "error",
+        });
         return;
       }
       const data = await res.json();
@@ -1272,8 +1381,11 @@ const Manuscript: React.FC = () => {
       navigate('/library');
     }
     catch (err: any) {
-      console.error(err);
-      MySwal.fire("There was an error getting the manuscript. Please try again.");
+      MySwal.fire({
+        title: "Error Getting Manuscript",
+        text: "There was an error retrieving this manuscript. Please try again",
+        icon: "error",
+      });
     }
   };
 
@@ -1345,7 +1457,7 @@ const Manuscript: React.FC = () => {
 };
 
 const EditManuscript: React.FC = () => {
-  const { manuscriptId } = useParams();
+  const { manuscriptId } = useParams<{ manuscriptId: string }>();
   const [manuscript, setManuscript] = useState<Cover | null>(null);
   const [fields, setFields] = useState<FormFields>({
     title: '',
@@ -1367,7 +1479,11 @@ const EditManuscript: React.FC = () => {
       credentials: "include",
     }).then(r => {
       if (!r.ok) {
-        MySwal.fire("There was an error fetching the manuscript.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error fetching the manuscript.",
+          icon: "error",
+        });
       }
       return r.json();
     }).then(data => {
@@ -1378,9 +1494,12 @@ const EditManuscript: React.FC = () => {
         author: data.author,
         pageCount: data.page_count
       });
-    }).catch(error => {
-      console.error(error);
-      MySwal.fire("There was an error fetching the manuscript.");
+    }).catch(() => {
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error fetching the manuscript.",
+        icon: "error",
+      });
     });
   }, [manuscriptId]);
 
@@ -1391,20 +1510,71 @@ const EditManuscript: React.FC = () => {
     }
     try {
       const res = await fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}`, {
-        method: "PUT",
+        method: "PATCH",
         credentials: "include",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
       });
       if (!res.ok) {
-        MySwal.fire("There was an error updating the manuscript.");
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error updating the manuscript.",
+          icon: "error",
+        });
       }
-      MySwal.fire("Manuscript updated successfully!");
+      MySwal.fire({
+        title: "Success!",
+        text: "Manuscript updated successfully!",
+        icon: "success",
+      });
       navigate(`/manuscript/${manuscriptId}`);
     }
     catch (err: any) {
-      console.error(err);
-      MySwal.fire("There was an error updating the manuscript. Please try again.");
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error updating the manuscript.",
+        icon: "error",
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    const result = await MySwal.fire({
+      title: "Are you sure?",
+      text: "This action cannot be undone. The manuscript will be permanently deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const res = await fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/remove`, {
+          method: "PATCH",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          MySwal.fire({
+            title: "Error",
+            text: "There was an error deleting the manuscript.",
+            icon: "error",
+          });
+        }
+        MySwal.fire({
+          title: "Success",
+          text: "Manuscript deleted successfully.",
+          icon: "success",
+        });
+        navigate('/dashboard/creator');
+      }
+      catch (err: any) {
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error deleting the manuscript.",
+          icon: "error",
+        });
+      }
     }
   };
 
@@ -1442,63 +1612,120 @@ const EditManuscript: React.FC = () => {
           </button>
         </div>
       </div>
+      <button className="rounded m-3 p-3 w-25 border-none" onClick={handleDelete}>
+        Delete Manuscript
+      </button>
       <Footer />
     </div>
   );
 };
 
-interface ReadCover {
-  id: string;
-  title: string;
-  description: string;
-  manuscript_path: string;
-};
+interface PreviewSection {
+  content: string;
+}
+
+interface PreviewData {
+  format: 'epub' | 'pdf';
+  sections: PreviewSection[];
+}
 
 const Reader: React.FC = () => {
-  const { manuscriptId } = useParams();
-  const [manuscript, setManuscript] = useState<ReadCover | null>(null);
+  const { manuscriptId } = useParams<{ manuscriptId: string }>();
+  const [preview, setPreview] = useState<PreviewData | null>(null);
   const MySwal = withReactContent(Swal);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/read`, {
-      method: "GET",
-      credentials: "include",
-    }).then(r => {
-      if (!r.ok) {
-        MySwal.fire("There was an error fetching the manuscript for reading.");
-      }
-      return r.json();
-    }).then(data => {
-      setManuscript(data);
-    }).catch(error => {
-      console.error(error);
-      MySwal.fire("There was an error fetching the manuscript for reading.");
-    });
-  }, []);
-
-  useEffect(() => {
-    const elements = document.querySelectorAll(".slide-up");
-    const observer = new IntersectionObserver(
-      (entries, obs) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("show");
-            obs.unobserve(entry.target); // Animate only once
-          }
+    async function load() {
+      try {
+        const res = await fetch(`readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/preview`, {
+          method: "GET",
+          credentials: "include",
         });
-      },
-      { threshold: 0.1 }
-    );
-    elements.forEach((el) => observer.observe(el));
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
+        if (res.status === 403) {
+          const data = await res.json();
+          if (data.owned) {
+            MySwal.fire({
+              title: "Owner",
+              text: "You already own this manuscript",
+              icon: "info",
+            });
+            navigate('/library');
+            return;
+          }
+        }
+        if (!res.ok) {
+          MySwal.fire({
+            title: "Error",
+            text: "There was an error getting the preview.",
+            icon: "error",
+          });
+          return;
+        }
+        const data = await res.json();
+        setPreview(data);
+      }
+      catch {
+        MySwal.fire({
+          title: "Error",
+          text: "There was an error getting this preview",
+          icon: "error",
+        });
+      }
+      finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [manuscriptId, navigate]);
+
+  if (loading) {
+    return <p>Loading Preview...</p>
+  }
+  if (!preview || preview.sections.length === 0) {
+    return <p>No preview available</p>;
+  }
   return (
-    <div className="container text-center slide-up hidden">
-      {manuscript && (
-        <p>Placeholder for manuscript content</p>
-      )}
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 16px' }}>
+      <div style={{
+        background: '#fffbe6',
+        border: '1px solid #f0e68c',
+        borderRadius: 8,
+        padding: '12px 16px',
+        marginBottom: 24,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <span>You are reading a preview — {preview.sections.length} sections shown</span>
+        <button onClick={() => navigate(`/manuscripts/${manuscriptId}`)}>
+          Get full manuscript
+        </button>
+      </div>
+
+      {preview.sections.map((section, i) => (
+        <div
+          key={i}
+          dangerouslySetInnerHTML={{ __html: section.content }}
+          style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: 18,
+            lineHeight: 1.8,
+            color: '#1a1a1a',
+            marginBottom: 48,
+            paddingBottom: 48,
+            borderBottom: i < preview.sections.length - 1 ? '1px solid #eee' : 'none',
+          }}
+        />
+      ))}
+
+      <div style={{ textAlign: 'center', padding: '48px 0' }}>
+        <p style={{ marginBottom: 16 }}>You've reached the end of the preview</p>
+        <button onClick={() => navigate(`/manuscripts/${manuscriptId}`)}>
+          Get full manuscript
+        </button>
+      </div>
     </div>
   );
 };
@@ -1517,14 +1744,21 @@ const Explore: React.FC = () => {
       credentials: "include",
     }).then(r => {
       if (!r.ok) {
-        MySwal.fire("There was n error fetching the recent tranding text.");
+        MySwal.fire({
+          title: "Error Getting Certain Content",
+          text: "There was an error fetching the most recent trending text.",
+          icon: "info",
+        });
         return r.json();
       }
     }).then(data => {
       setTrending(data);
-    }).catch(error => {
-      console.error(error);
-      MySwal.fire("There was an error fetching the most recent trending text.");
+    }).catch(() => {
+      MySwal.fire({
+        title: "Error Getting Certain Content",
+        text: "There was an error fetching the most recent trending text.",
+        icon: "info",
+      });
     });
 
     fetch("https://readaroll-backend-production.up.railway.app/recent", {
@@ -1532,14 +1766,21 @@ const Explore: React.FC = () => {
       credentials: "include",
     }).then(r => {
       if (!r.ok) {
-        MySwal.fire("There was an error fetching recently added texts.");
+        MySwal.fire({
+          title: "Error Getting Certain Content",
+          text: "There was an error fetching recently added texts.",
+          icon: "info",
+        });
       }
       return r.json();
     }).then(data => {
       setRecent(data);
-    }).catch(error => {
-      console.error(error);
-      MySwal.fire("There was an error fetching the most recently added text.");
+    }).catch(() => {
+      MySwal.fire({
+        title: "Error Getting Certain Content",
+        text: "There was an error fetching the most recently added text.",
+        icon: "info",
+      });
     })
   }, []);
 
