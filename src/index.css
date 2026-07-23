@@ -89,10 +89,6 @@ i:hover {
 .logo:hover {
   transform: scale(1.1);
 }
-th, td {
-  border-bottom: 1px solid #F5F5F5;
-  padding: 8px;
-}
 .upload {
   margin: 20px;
   font-size: 24px;

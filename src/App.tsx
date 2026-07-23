@@ -1012,19 +1012,23 @@ const Library: React.FC = () => {
       <h1 className="mx-auto p-2">ReadaRoll Library</h1>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
-        {library.length === 0 ? (
+        {(library?.length ?? 0) === 0 ? (
           <p className="p-2 py-3">Your library is empty. Start by getting a manuscript!</p>
         ) : (
           library.map((cover) => (
             <div key={cover.id} className="col-sm-6 col-md-4 col-lg-3 p-2">
               <Link to={`/manuscripts/${cover.id}`} className="text-decoration-none text-dark">
-                <div className="card h-100">
+                <div className="card h-100" style={{ transition: 'transform 0.1s ease-in-out', cursor: 'pointer' }} onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')} onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}>
                   {cover?.cover_path ? (
-                    <img src={cover.cover_path} className="card-img-top" alt={`${cover.title} cover`} />
+                    <div className="d-flex justify-content-center">
+                      <img src={cover.cover_path} className="card-img-top" alt={`${cover.title} cover`} />
+                    </div>
                   ) : (
-                    <div className="card-img-top bg-light d-flex align-items-center justify-content-center" style={{ height: '240px' }}>
-                      <span className="m-3">{cover.title}</span>
-                      <span className="m-3">{cover.author}</span>
+                    <div className="d-flex justify-content-center">
+                      <div className="card-img-top flex-column bg-light d-flex align-items-center justify-content-center" style={{ height: '240px' }}>
+                        <span className="m-3">{cover.title}</span>
+                        <span className="m-3">{cover.author}</span>
+                      </div>
                     </div>
                   )}
                   <div className="card-body">
@@ -1291,8 +1295,8 @@ function StarModal({ isOpen, manuscriptId, currentRating, onClose, onSuccess }: 
   };
 
   return (
-    <dialog ref={dialogRef} onClose={onClose} style={{ border: 'none', borderRadius: 8, padding: 20, width: '300px', textAlign: 'center' }}>
-      <h3>Rate this Manuscript</h3>
+    <dialog ref={dialogRef} onClose={onClose} style={{ border: 'none', borderRadius: 8, padding: 20, backgroundColor: '#222222', width: '400px', textAlign: 'center' }}>
+      <h3 className="text-light">Rate this Manuscript</h3>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
         {[1, 2, 3, 4, 5].map((star) => (
           <button
@@ -1307,10 +1311,10 @@ function StarModal({ isOpen, manuscriptId, currentRating, onClose, onSuccess }: 
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
-        <button className="rounded m-3 p-3 w-25 border-none" onClick={onClose} disabled={submitting}>
+        <button className="rounded m-2 p-3 border-none" style={{ fontSize: '16px' }} onClick={onClose} disabled={submitting}>
           Close
         </button>
-        <button className="rounded m-3 p-3 w-25 border-none" onClick={handleSubmit} disabled={submitting || !selected}>
+        <button className="rounded m-2 p-3 border-none" style={{ fontSize: '16px' }} onClick={handleSubmit} disabled={submitting || !selected}>
           {submitting ? 'Submitting...' : currentRating ? 'Update Rating' : 'Submit Rating'}
         </button>
       </div>
@@ -1342,7 +1346,7 @@ const Manuscript: React.FC = () => {
       return r.json();
     }).then(data => {
       setManuscript(data);
-      setRatingAvg(data.rating_avg);
+      setRatingAvg(Number(data.rating_avg));
       setRatingCount(data.rating_count);
     }).catch(() => {
       MySwal.fire({
@@ -1413,37 +1417,35 @@ const Manuscript: React.FC = () => {
       <h1 className="mx-auto p-2">ReadaRoll</h1>
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
-        <div className="col-sm-6 p-4">
+        <div className="col-sm-12 p-4">
           <h4 className="m-1 mb-4">{manuscript?.title}</h4>
           {manuscript?.cover_path ? (
-            <img src={manuscript.cover_path} alt="Cover" style={{ width: 160, height: 240, objectFit: 'cover' }} />
+            <div className="d-flex justify-content-center">
+              <img src={manuscript.cover_path} alt="Cover" style={{ width: 160, height: 240, objectFit: 'cover' }} />
+            </div>
           ) : (
-            <div style={{ width: 160, height: 240, border: '2px solid #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="m-3">{manuscript?.title}</span>
-              <span className="m-3">{manuscript?.author}</span>
+            <div className="d-flex justify-content-center">
+              <div className="d-flex flex-column align-items-center justify-content-center" style={{ width: 180, height: 240, border: '2px solid #ccc', margin: '20px' }}>
+                <span className="m-1">{manuscript?.title}</span>
+                <span className="m-1">{manuscript?.author}</span>
+              </div>
             </div>
           )}
-          <p className="home-list border-top p-2 py-3">{manuscript?.description}</p>
-        </div>
-        <div className="col-sm-6 p-4">
-          <p className="home-list border-top p-2 py-3">Author: {manuscript?.author}</p>
-          <p className="home-list border-top p-2 py-3">Page Count: {manuscript?.page_count}</p>
+          <p className="home-list p-2 py-1">Author: {manuscript?.author}</p>
+          <p className="home-list p-2 py-1">Page Count: {manuscript?.page_count}</p>
+          <p className="home-list border-top pt-3">{manuscript?.description}</p>
         </div>
       </div>
-      <div className="row px-5 pt-2 m-2 slide-up hidden">
-        <div className="col-sm-12 p-4">
+      <div className="row px-5 slide-up hidden">
+        <div className="col-sm-12 p-1">
           <p className="home-list border-top p-2 py-3">Rating: {ratingAvg.toFixed(2)} ({ratingCount} reviews)</p>
           <button className="rounded m-3 p-3 w-25 border-none" onClick={() => setShowRatingModal(true)}>
-            {manuscript?.rating_count ? 'Update Rating' : 'Rate this Manuscript'}
+            {manuscript?.rating_count ? 'Update Rating' : 'Rate'}
+          </button>
+          <button className="rounded m-3 p-3 w-25 border-none" onClick={handleGetManuscript}>
+            Get <i className="fa-solid fa-book"></i>
           </button>
         </div>
-      </div>
-      <div className="row px-5 pt-2 m-2 slide-up hidden">
-          <div className="col-sm-12 p-4">
-            <button className="rounded m-3 p-3 w-25 border-none" onClick={handleGetManuscript}>
-              Get <i className="fa-solid fa-book"></i>
-            </button>
-          </div>
       </div>
       <Footer />
       {showRatingModal && manuscript && (
@@ -1785,7 +1787,7 @@ const Explore: React.FC = () => {
   }, []);
 
   const loadMore = async () => {
-    const res = await fetch(`https://readaroll-backend-production.up.railway.app/library?cursor=${cursor || 0}`, {
+    const res = await fetch(`https://readaroll-backend-production.up.railway.app/collection?cursor=${cursor || 0}`, {
       method: "GET",
       credentials: "include",
     });
@@ -1838,28 +1840,28 @@ const Explore: React.FC = () => {
       <img src={logo} alt="ReadaRoll Logo" className="m-3 logo" title="ReadaRoll Logo" width={100} height={100} />
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-12 p-4">
-          <input type="text" className="m-4 p-1 rounded border w-75 d-inline" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={handleKeyDown} />
+          <input type="text" className="m-4 p-2 rounded border w-75 d-inline" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={handleKeyDown} />
           <p className="d-inline w-25"><i className="fas fa-search" onClick={runSearch}></i></p>
         </div>
       </div>
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-12 p-4">
           <h4 className="m-3">Trending</h4>
-          {trending.length > 0 && (
+          {(trending?.length ?? 0) > 0 && (
             <CoverGrid covers={trending} />
           )}
         </div>
       </div>
       <div className="row px-5 pt-2 m-2 slide-up hidden">
           <h4 className="m-3">Recently Added</h4>
-          {recent.length > 0 && (
+          {(recent?.length ?? 0) > 0 && (
             <CoverGrid covers={recent} />
           )}
       </div>
       <div className="row px-5 pt-2 m-2 slide-up hidden">
         <div className="col-sm-12 p-4">
             <h4 className="m-3">Library</h4>
-            {library.length > 0 && (
+            {(library?.length ?? 0) > 0 && (
               <CoverGrid covers={library} />
             )}
             {cursor && (
