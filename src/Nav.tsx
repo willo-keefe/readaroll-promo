@@ -9,18 +9,21 @@ const Nav: React.FC = () => {
                 <Link to="/" className=" m-1 mx-3 mb-3 link" title="Home">
                     Home
                 </Link>
-                    <Link to="/about" className="m-1 mx-4 mb-3 link" title="About">
-                        About
+                <Link to="/about" className="m-1 mx-4 mb-3 link" title="About">
+                    About
+                </Link>
+                <Link to="/explore" className="m-1 mx-4 mb-3 link" title="Explore">
+                    Explore
+                </Link>
+                {isAuthenticated ? (
+                    <Link to="/dashboard" className="m-1 mx-4 mb-3 link" title="Dashboard">
+                        Dashboard
                     </Link>
-                    {isAuthenticated ? (
-                        <Link to="/dashboard" className="m-1 mx-4 mb-3 link" title="Dashboard">
-                            Dashboard
-                        </Link>
-                    ) : (
-                        <Link to="/login" className="m-1 mx-4 mb-3 link" title="Login">
-                            Login
-                        </Link>
-                    )}
+                ) : (
+                    <Link to="/login" className="m-1 mx-4 mb-3 link" title="Login">
+                        Login
+                    </Link>
+                )}
         </nav>
     );
 };

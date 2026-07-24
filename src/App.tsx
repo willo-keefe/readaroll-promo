@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useRef } from 'react';
+import React, { useEffect, useState, useContext, useRef, useCallback } from 'react';
 import { BrowserRouter as Router, Route, Routes, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import logo from '../android-chrome-192x192.png';
 import Swal from 'sweetalert2';
@@ -7,6 +7,10 @@ import Nav from './Nav';
 import Footer from './Footer';
 import AuthContext, { AuthProvider } from './AuthContext';
 import CoverGrid from './CoverGrid';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 const Home: React.FC = () => {
   useEffect(() => {
@@ -1529,7 +1533,7 @@ const EditManuscript: React.FC = () => {
         text: "Manuscript updated successfully!",
         icon: "success",
       });
-      navigate(`/manuscript/${manuscriptId}`);
+      navigate(`/manuscripts/${manuscriptId}`);
     }
     catch (err: any) {
       MySwal.fire({
@@ -1626,37 +1630,49 @@ interface PreviewSection {
   content: string;
 }
 
-interface PreviewData {
-  format: 'epub' | 'pdf';
-  sections: PreviewSection[];
+type PreviewData = 
+  | { format: 'epub'; sections: PreviewSection[] }
+  | { format: 'pdf'; signedUrl: string }
+
+interface ReaderPrefs {
+  fontSize: number;
+  lineHeight: number;
 }
 
-const Reader: React.FC = () => {
+interface Slide {
+  html: string;
+}
+
+function parseSectionToSlides(html: string): Slide[] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+  const slides: Slide[] = [];
+
+  doc.body.firstElementChild?.childNodes.forEach(node => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as Element;
+      const text = el.textContent?.trim() ?? '';
+      if (text.length < 20) return; // skip near-empty nodes
+      slides.push({ html: el.outerHTML });
+    }
+  });
+
+  return slides;
+}
+
+const Preview: React.FC = () => {
   const { manuscriptId } = useParams<{ manuscriptId: string }>();
-  const [preview, setPreview] = useState<PreviewData | null>(null);
   const MySwal = withReactContent(Swal);
+  const [data, setData] = useState<PreviewData | null>(null);
   const navigate = useNavigate();
-  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/preview`, {
+        const res = await fetch(`https://readaroll-backend-production.up.railway.app/manuscripts/${manuscriptId}/preview`, {
           method: "GET",
           credentials: "include",
         });
-        if (res.status === 403) {
-          const data = await res.json();
-          if (data.owned) {
-            MySwal.fire({
-              title: "Owner",
-              text: "You already own this manuscript",
-              icon: "info",
-            });
-            navigate('/library');
-            return;
-          }
-        }
         if (!res.ok) {
           MySwal.fire({
             title: "Error",
@@ -1665,8 +1681,8 @@ const Reader: React.FC = () => {
           });
           return;
         }
-        const data = await res.json();
-        setPreview(data);
+        const data: PreviewData = await res.json();
+        setData(data);
       }
       catch {
         MySwal.fire({
@@ -1675,62 +1691,364 @@ const Reader: React.FC = () => {
           icon: "error",
         });
       }
-      finally {
-        setLoading(false);
-      }
     }
     load();
   }, [manuscriptId, navigate]);
 
-  if (loading) {
-    return <p>Loading Preview...</p>
+  if (!data) {
+    return <p>Loading...</p>
   }
-  if (!preview || preview.sections.length === 0) {
+
+  if (data.format === 'epub') {
+    return <PreviewEpub sections={data.sections} manuscriptId={manuscriptId!} />
+  }
+  return <PreviewPdf signedUrl={data.signedUrl} manuscriptId={manuscriptId!} />
+};
+
+interface EpubProps {
+  sections: { content: string }[];
+  manuscriptId: string;
+}
+
+function PreviewEpub({ sections, manuscriptId }: EpubProps) {
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const navigate = useNavigate();
+  const [current, setCurrent] = useState<number>(0);
+  const [prefs, setPrefs] = useState<ReaderPrefs>({ fontSize: 19, lineHeight: 1.85 });
+  const [showControls, setShowControls] = useState<boolean>(false);
+  const [transitioning, setTransitioning] = useState<boolean>(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const allSlides = sections.flatMap(s => parseSectionToSlides(s.content));
+    setSlides(allSlides);
+  }, [sections]);
+
+  const goTo = useCallback((index: number) => {
+    if (transitioning || slides.length === 0) return;
+    const clamped = Math.max(0, Math.min(index, slides.length - 1));
+    if (clamped === current) return;
+    setTransitioning(true);
+    // Step 3: 150ms transition — fast like a feed
+    setTimeout(() => {
+      setCurrent(clamped);
+      setTransitioning(false);
+    }, 150);
+  }, [slides, current, transitioning]);
+
+  const goNext = useCallback(() => goTo(current + 1), [goTo, current]);
+  const goPrev = useCallback(() => goTo(current - 1), [goTo, current]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowDown' || e.key === 's') { e.preventDefault(); goNext(); }
+      if (e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); goPrev(); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [goNext, goPrev]);
+
+  useEffect(() => {
+    let cooldown = false;
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      if (cooldown) return;
+      cooldown = true;
+      if (e.deltaY > 0) goNext(); else goPrev();
+      // Step 4: 300ms cooldown — snappier than before
+      setTimeout(() => { cooldown = false; }, 300);
+    }
+    const el = containerRef.current;
+    el?.addEventListener('wheel', onWheel, { passive: false });
+    return () => el?.removeEventListener('wheel', onWheel);
+  }, [goNext, goPrev]);
+
+  if (slides.length === 0) {
     return <p>No preview available</p>;
   }
+
+  const isLast = current === slides.length - 1;
+  const progressPct = ((current + 1) / slides.length) * 100;
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 16px' }}>
+    <div
+      ref={containerRef}
+      style={{
+        position: 'fixed', inset: 0,
+        background: '#0f0f0f',
+        overflow: 'hidden',
+        userSelect: 'none',
+      }}
+    >
+      {/* Progress bar — right edge */}
       <div style={{
-        background: '#fffbe6',
-        border: '1px solid #f0e68c',
-        borderRadius: 8,
-        padding: '12px 16px',
-        marginBottom: 24,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        position: 'absolute', top: 0, right: 50,
+        width: 3, height: '100%',
+        background: '#2a2a2a', zIndex: 10,
       }}>
-        <span>You are reading a preview — {preview.sections.length} sections shown</span>
-        <button onClick={() => navigate(`/manuscripts/${manuscriptId}`)}>
+        <div style={{
+          width: '100%',
+          height: `${progressPct}%`,
+          background: '#c8b99a',
+          transition: 'height 0.3s ease',
+        }} />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0', flexShrink: 0, zIndex: 20 }}>
+        {/* Settings toggle */}
+        <button
+          onClick={() => setShowControls(v => !v)}
+          style={{
+            background: 'none', border: '1px solid #2a2a2a', borderRadius: 6,
+            padding: '6px 10px', color: '#5a5a5a', cursor: 'pointer',
+            fontSize: 13, fontFamily: 'Georgia, serif',
+          }}
+        >
+          Aa
+        </button>
+
+        {/* Section counter */}
+        <div style={{ fontSize: 12, fontFamily: 'Georgia, serif', marginRight: 12 }}>
+          {current + 1} / {slides.length}
+        </div>
+      </div>
+
+      {/* Settings panel */}
+      {showControls && (
+        <div style={{
+          position: 'absolute', top: 52, left: 16, zIndex: 20,
+          background: '#1a1a1a', border: '1px solid #2a2a2a',
+          borderRadius: 8, padding: '16px 20px', width: 220,
+        }}>
+          <label style={{ fontSize: 12, color: '#5a5a5a', display: 'block', marginBottom: 8 }}>
+            Font size — {prefs.fontSize}px
+          </label>
+          <input
+            type="range" min={14} max={26} step={1}
+            value={prefs.fontSize}
+            onChange={e => setPrefs(p => ({ ...p, fontSize: Number(e.target.value) }))}
+            style={{ width: '100%', marginBottom: 16, accentColor: '#c8b99a' }}
+          />
+          <label style={{ fontSize: 12, color: '#5a5a5a', display: 'block', marginBottom: 8 }}>
+            Line height — {prefs.lineHeight.toFixed(2)}
+          </label>
+          <input
+            type="range" min={1.4} max={2.4} step={0.05}
+            value={prefs.lineHeight}
+            onChange={e => setPrefs(p => ({ ...p, lineHeight: Number(e.target.value) }))}
+            style={{ width: '100%', accentColor: '#c8b99a' }}
+          />
+        </div>
+      )}
+
+      {/* single paragraph, vertically centered, full viewport */}
+      <div style={{
+        flex: 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px 48px', // horizontal padding keeps text away from arrow buttons
+        opacity: transitioning ? 0 : 1,
+        transform: transitioning ? 'translateY(8px)' : 'translateY(0)',
+        transition: 'opacity 0.15s ease, transform 0.15s ease',
+        overflow: 'hidden',
+      }}>
+        <div
+          dangerouslySetInnerHTML={{ __html: slides[current].html }}
+          style={{
+            maxWidth: 580,
+            width: '100%',
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontSize: prefs.fontSize,
+            lineHeight: prefs.lineHeight,
+            color: '#f0ebe0',
+          }}
+          ref={el => {
+            if (!el) {
+              return;
+            }
+            let style = el.querySelector('style.reader-override') as HTMLStyleElement | null;
+            if (!style) {
+              style = document.createElement('style');
+              style.className = 'reader-override';
+              el.prepend(style);
+            }
+            style.textContent = `* { font-size: ${prefs.fontSize}px !important; line-height: ${prefs.lineHeight} !important; }`;
+          }}
+        />
+      </div>
+
+      {/* Bottom banner */}
+      <div style={{
+        position: 'absolute', bottom: 0, right: 8,
+        padding: '48px 24px 32px',
+        background: 'linear-gradient(transparent, #0f0f0f 40%)',
+        zIndex: 10,
+        display: 'flex', justifyContent: 'center',
+      }}>
+        <button
+          onClick={() => navigate(`/manuscripts/${manuscriptId}`)}
+          style={{
+            background: '#c8b99a', border: 'none', borderRadius: 6,
+            padding: '10px 24px', fontSize: 14, cursor: 'pointer',
+            color: '#0f0f0f', fontFamily: 'Georgia, serif', fontWeight: 600,
+          }}
+        >
           Get full manuscript
         </button>
       </div>
 
-      {preview.sections.map((section, i) => (
-        <div
-          key={i}
-          dangerouslySetInnerHTML={{ __html: section.content }}
+      {/* Arrow nav */}
+      {current > 0 && (
+        <button
+          onClick={goPrev}
           style={{
-            fontFamily: 'Georgia, serif',
-            fontSize: 18,
-            lineHeight: 1.8,
-            color: '#1a1a1a',
-            marginBottom: 48,
-            paddingBottom: 48,
-            borderBottom: i < preview.sections.length - 1 ? '1px solid #eee' : 'none',
+            background: 'none', border: '1px solid #2a2a2a', borderRadius: 6,
+            fontSize: 18, cursor: 'pointer', padding: '8px 16px',
           }}
-        />
-      ))}
+          aria-label="Previous section"
+        >
+          <i className="fa-solid fa-arrow-up"></i>
+        </button>
+      )}
+      {!isLast && (
+        <button
+          onClick={goNext}
+          style={{
+            background: 'none', border: '1px solid #2a2a2a', borderRadius: 6,
+            fontSize: 18, cursor: 'pointer', padding: '8px 16px',
+          }}
+          aria-label="Next section"
+        >
+          <i className="fa-solid fa-arrow-down"></i>
+        </button>
+      )}
+    </div>
+  );
+};
 
-      <div style={{ textAlign: 'center', padding: '48px 0' }}>
-        <p style={{ marginBottom: 16 }}>You've reached the end of the preview</p>
-        <button onClick={() => navigate(`/manuscripts/${manuscriptId}`)}>
+interface PdfProps {
+  signedUrl: string;
+  manuscriptId: string;
+}
+
+function PreviewPdf({ signedUrl, manuscriptId }: PdfProps) {
+  const navigate = useNavigate();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+  const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
+  const [numPages, setNumPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const MySwal = withReactContent(Swal);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const pdf = await pdfjsLib.getDocument({ url: signedUrl }).promise;
+        if (cancelled) return;
+        pdfRef.current = pdf;
+        setNumPages(pdf.numPages);
+        setLoading(false);
+      } catch {
+        if (!cancelled) {
+          MySwal.fire({
+            title: "Error",
+            text: "Failed to load pdf preview",
+            icon: "error",
+          });
+        }
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [signedUrl]);
+
+  useEffect(() => {
+    if (!pdfRef.current || !canvasRef.current || loading) return;
+
+    async function renderPage() {
+      renderTaskRef.current?.cancel();
+      try {
+        const page = await pdfRef.current!.getPage(currentPage);
+        const viewport = page.getViewport({ scale: window.devicePixelRatio || 1.5 });
+        const canvas = canvasRef.current!;
+        const ctx = canvas.getContext('2d')!;
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = '100%';
+
+        const task = page.render({ canvas, canvasContext: ctx, viewport });
+        renderTaskRef.current = task;
+        await task.promise;
+      } catch (err: any) {
+        if (err?.name !== 'RenderingCancelledException') {
+          MySwal.fire({
+            title: "Error",
+            text: "Failed to render page",
+            icon: "error",
+          })
+        }
+      }
+    }
+
+    renderPage();
+  }, [currentPage, loading]);
+
+  if (loading) {
+    return <p>Loading...</p>
+  }
+  
+  const isLast = currentPage === numPages;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: '#0f0f0f', overflow: 'hidden' }}>
+      <canvas ref={canvasRef} style={{ maxWidth: '100%', display: 'block', margin: '0 auto' }} />
+
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 16 }}>
+        <button
+          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+          style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, padding: '8px 16px', color: '#f0ebe0', cursor: 'pointer' }}
+        >
+          <i className="fa-solid fa-arrow-up" />
+        </button>
+        <span style={{ fontSize: 12, fontFamily: 'Georgia, serif' }}>
+          {currentPage} / {numPages}
+        </span>
+        <button
+          onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
+          disabled={isLast}
+          style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, padding: '8px 16px', color: '#f0ebe0', cursor: 'pointer' }}
+        >
+          <i className="fa-solid fa-arrow-down" />
+        </button>
+      </div>
+
+      <div style={{
+        position: 'absolute', bottom: 0, right: 8,
+        padding: '48px 24px 32px',
+        background: 'linear-gradient(transparent, #0f0f0f 40%)',
+        zIndex: 10, display: 'flex', justifyContent: 'center',
+      }}>
+        <button
+          onClick={() => navigate(`/manuscripts/${manuscriptId}`)}
+          style={{
+            background: '#c8b99a', border: 'none', borderRadius: 6,
+            padding: '10px 24px', fontSize: 14, cursor: 'pointer',
+            fontFamily: 'Georgia, serif', fontWeight: 600,
+          }}
+        >
           Get full manuscript
         </button>
       </div>
     </div>
   );
-};
+}
 
 const Explore: React.FC = () => {
   const [trending, setTrending] = useState<Cover[]>([]);
@@ -1892,7 +2210,7 @@ function App() {
           <Route path="/users/:username" element={<Profile />} />
           <Route path="/manuscripts/:manuscriptId" element={<Manuscript />} />
           <Route path="/manuscripts/:manuscriptId/edit" element={<EditManuscript />} />
-          <Route path="/manuscripts/:manuscriptId/read" element={<Reader />} />
+          <Route path="/manuscripts/:manuscriptId/preview" element={<Preview />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

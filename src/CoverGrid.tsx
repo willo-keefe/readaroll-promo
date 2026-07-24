@@ -4,7 +4,7 @@ export default function CoverGrid({ covers }: { covers: any[] }) {
         <div>
             {covers.map((cover) => (
                 <div key={cover.id} className="col-sm-4 rounded p-2 mb-4 mt-2">
-                    <Link to={`/manuscript/${cover.id}`} className="text-decoration-none text-dark">
+                    <Link to={`/manuscripts/${cover.id}`} className="text-decoration-none text-dark">
                         <div className="card h-100 text-dark" style={{ transition: 'transform 0.1s ease-in-out', cursor: 'pointer' }} onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')} onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}>
                             {cover.cover_path ? (
                                 <div className="d-flex justify-content-center">
