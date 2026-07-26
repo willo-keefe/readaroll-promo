@@ -1717,13 +1717,67 @@ function PreviewEpub({ sections, manuscriptId }: EpubProps) {
   const [prefs, setPrefs] = useState<ReaderPrefs>({ fontSize: 19, lineHeight: 1.85 });
   const [showControls, setShowControls] = useState<boolean>(false);
   const [transitioning, setTransitioning] = useState<boolean>(false);
+  const [selection, setSelection] = useState<{ text: string; range: Range; x: number; y: number } | null>(null);
+  const [definition, setDefinition] = useState<string | null>(null);
+  const [modal, setModal] = useState<boolean>(false);
+  const MySwal = withReactContent(Swal);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleSelectionChange() {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+        setSelection(null);
+        return;
+      }
+
+      // Only trigger if selection is inside the content div
+      const range = sel.getRangeAt(0);
+      if (!contentRef.current?.contains(range.commonAncestorContainer)) {
+        setSelection(null);
+        return;
+      }
+
+      const rect = range.getBoundingClientRect();
+      setSelection({
+        text: sel.toString().trim(),
+        range,
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+      });
+    }
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, []);
 
   useEffect(() => {
     const allSlides = sections.flatMap(s => parseSectionToSlides(s.content));
     setSlides(allSlides);
   }, [sections]);
+
+  useEffect(() => {
+    const styleId = 'epub-reader-override';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = `
+      .epub-reader-content * {
+        font-size: ${prefs.fontSize}px !important;
+        line-height: ${prefs.lineHeight} !important;
+      }
+    `;
+
+    return () => {
+      // clean up when component unmounts
+      document.getElementById(styleId)?.remove();
+    };
+  }, [prefs.fontSize, prefs.lineHeight]);
 
   const goTo = useCallback((index: number) => {
     if (transitioning || slides.length === 0) return;
@@ -1770,8 +1824,50 @@ function PreviewEpub({ sections, manuscriptId }: EpubProps) {
     return <p>No preview available</p>;
   }
 
-  const isLast = current === slides.length - 1;
-  const progressPct = ((current + 1) / slides.length) * 100;
+  const handleDefine = async (word: string) => {
+    setModal(true);
+    setDefinition(null);
+
+    try {
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
+      const data = await res.json();
+
+      const def = data[0]?.meanings[0]?.definitions[0]?.definition || null;
+      setDefinition(def !== null ? def : "No definition found");
+    }
+    catch {
+      MySwal.fire({
+        title: "Error",
+        text: "There was an error generating a definition for this word.",
+        icon: "error",
+      });
+    }
+  };
+
+  const closeModal = () => {
+    setModal(false);
+    setDefinition(null);
+  };
+
+  const styles = {
+    backdrop: {
+      position: "fixed" as const,
+      top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.6)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 999,
+    },
+    modal: {
+      backgroundColor: "#fff",
+      padding: "2rem",
+      borderRadius: "8px",
+      maxWidth: "400px",
+      boxShadow: "0 0 20px rgba(0, 0, 0, 0.2)",
+    }
+  };
+  
   return (
     <div
       ref={containerRef}
@@ -1782,19 +1878,6 @@ function PreviewEpub({ sections, manuscriptId }: EpubProps) {
         userSelect: 'none',
       }}
     >
-      {/* Progress bar — right edge */}
-      <div style={{
-        position: 'absolute', top: 0, right: 50,
-        width: 3, height: '100%',
-        background: '#2a2a2a', zIndex: 10,
-      }}>
-        <div style={{
-          width: '100%',
-          height: `${progressPct}%`,
-          background: '#c8b99a',
-          transition: 'height 0.3s ease',
-        }} />
-      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0', flexShrink: 0, zIndex: 20 }}>
         {/* Settings toggle */}
@@ -1811,16 +1894,16 @@ function PreviewEpub({ sections, manuscriptId }: EpubProps) {
 
         {/* Section counter */}
         <div style={{ fontSize: 12, fontFamily: 'Georgia, serif', marginRight: 12 }}>
-          {current + 1} / {slides.length}
+          <input type="text" inputMode="numeric" pattern="[0-9]*" value={current + 1} className="w-25 text-center" onChange={e => setCurrent(Number(e.target.value))} style={{ fontSize: 12 }} /> / {slides.length}
         </div>
       </div>
 
       {/* Settings panel */}
       {showControls && (
         <div style={{
-          position: 'absolute', top: 52, left: 16, zIndex: 20,
+          position: 'absolute', top: 60, left: 16, zIndex: 20,
           background: '#1a1a1a', border: '1px solid #2a2a2a',
-          borderRadius: 8, padding: '16px 20px', width: 220,
+          borderRadius: 8, padding: '12px 16px', width: 220,
         }}>
           <label style={{ fontSize: 12, color: '#5a5a5a', display: 'block', marginBottom: 8 }}>
             Font size — {prefs.fontSize}px
@@ -1863,25 +1946,15 @@ function PreviewEpub({ sections, manuscriptId }: EpubProps) {
             lineHeight: prefs.lineHeight,
             color: '#f0ebe0',
           }}
-          ref={el => {
-            if (!el) {
-              return;
-            }
-            let style = el.querySelector('style.reader-override') as HTMLStyleElement | null;
-            if (!style) {
-              style = document.createElement('style');
-              style.className = 'reader-override';
-              el.prepend(style);
-            }
-            style.textContent = `* { font-size: ${prefs.fontSize}px !important; line-height: ${prefs.lineHeight} !important; }`;
-          }}
+          ref={contentRef}
+          className="epub-reader-content"
         />
       </div>
 
       {/* Bottom banner */}
       <div style={{
         position: 'absolute', bottom: 0, right: 8,
-        padding: '48px 24px 32px',
+        padding: '30px 20px 22px',
         background: 'linear-gradient(transparent, #0f0f0f 40%)',
         zIndex: 10,
         display: 'flex', justifyContent: 'center',
@@ -1891,37 +1964,49 @@ function PreviewEpub({ sections, manuscriptId }: EpubProps) {
           style={{
             background: '#c8b99a', border: 'none', borderRadius: 6,
             padding: '10px 24px', fontSize: 14, cursor: 'pointer',
-            color: '#0f0f0f', fontFamily: 'Georgia, serif', fontWeight: 600,
+            color: '#0f0f0f', fontFamily: 'Georgia, serif', fontWeight: 500,
           }}
         >
           Get full manuscript
         </button>
       </div>
 
-      {/* Arrow nav */}
-      {current > 0 && (
-        <button
-          onClick={goPrev}
+      {/* Selection toolbar */}
+      {selection && (
+        <div
           style={{
-            background: 'none', border: '1px solid #2a2a2a', borderRadius: 6,
-            fontSize: 18, cursor: 'pointer', padding: '8px 16px',
+            position: 'fixed',
+            left: selection.x,
+            top: selection.y - 48,
+            transform: 'translateX(-50%)',
+            background: '#1a1a1a',
+            border: '1px solid #2a2a2a',
+            borderRadius: 8,
+            display: 'flex',
+            gap: 4,
+            padding: '6px 8px',
+            zIndex: 100,
           }}
-          aria-label="Previous section"
         >
-          <i className="fa-solid fa-arrow-up"></i>
-        </button>
+          <button
+            onMouseDown={e => {
+              e.preventDefault(); // prevent selection clearing on click
+              handleDefine(selection.text);
+            }}
+            style={{ background: 'none', border: 'none', color: '#c8b99a', cursor: 'pointer', fontSize: 13, fontFamily: 'Georgia, serif' }}
+          >
+            Define
+          </button>
+        </div>
       )}
-      {!isLast && (
-        <button
-          onClick={goNext}
-          style={{
-            background: 'none', border: '1px solid #2a2a2a', borderRadius: 6,
-            fontSize: 18, cursor: 'pointer', padding: '8px 16px',
-          }}
-          aria-label="Next section"
-        >
-          <i className="fa-solid fa-arrow-down"></i>
-        </button>
+
+      {modal && (
+        <div style={styles.backdrop}>
+          <div style={styles.modal}>
+            <p>{definition}</p>
+            <button onClick={closeModal}>Close</button>
+          </div>
+        </div>
       )}
     </div>
   );
