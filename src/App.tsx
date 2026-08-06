@@ -79,7 +79,7 @@ const About: React.FC = () => {
         <div className="col-sm-12 pt-3">
           <h2 className="m-3">How does ReadaRoll Work?</h2>
           <p className="home-list">ReadaRoll lets you discover new writing and connect with others in a setting that is similar to social media.</p>
-          <p className="home-list">Make an account, choose a book, and scroll through the book, seeing the communities feedback on each page.</p>
+          <p className="home-list">Make an account, choose a piece, and scroll through it, seeing the communities feedback on each page.</p>
           <p className="home-list">ReadaRoll makes reading not only far easier, but it makes it a social experience.</p>
           <p className="home-list"><strong>ReadaRoll is primarily a mobile app. So download it on your app store soon for the best experience!</strong></p>
         </div>
